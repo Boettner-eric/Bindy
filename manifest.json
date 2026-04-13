@@ -12,6 +12,7 @@
         "scripts/storage.js",
         "scripts/hotkey.js",
         "scripts/selector.js",
+        "scripts/iframe.js",
         "scripts/bar.js",
         "scripts/themes.js",
         "scripts/modal.js",

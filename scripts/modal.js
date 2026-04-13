@@ -18,6 +18,7 @@ const BUILTIN_ACTIONS = [
   { type: "Blur", label: "blur elements" },
   { type: "changeTheme", label: "change theme" },
   { type: "changeLayout", label: "change layout" },
+  { type: "openSettings", label: "settings" },
 ];
 
 const SCOPE_OPTIONS = [
@@ -88,13 +89,21 @@ function openTypePickerModal() {
 }
 
 // pageUrl is passed so we can build scope options
-function openElementModal(targetEl, bindingType, pageUrl) {
+// targetEl may be a live DOM Element or a descriptor { selector, iframeSelector }
+// onNeedsAlt(onAltElement) is called when the user chooses to add an alternate element;
+// the caller sets up awaitingClick and later calls onAltElement(el) to continue the flow
+function openElementModal(targetEl, bindingType, pageUrl, { onNeedsAlt } = {}) {
   if (activeCancel) activeCancel();
+
+  const isDescriptor = !(targetEl instanceof Element);
 
   return new Promise((resolve) => {
     const modal = createModal();
     let settled = false;
-    const state = { selector: getSelector(targetEl) };
+    const state = {
+      selector: isDescriptor ? targetEl.selector : getSelector(targetEl),
+    };
+    if (isDescriptor) state.iframe = targetEl.iframeSelector;
 
     function finish(value) {
       if (settled) return;
@@ -118,7 +127,9 @@ function openElementModal(targetEl, bindingType, pageUrl) {
         scope: state.scope,
         mode: mode,
       };
+      if (state.iframe) binding.iframe = state.iframe;
       if (state.selectorAlt) binding.selectorAlt = state.selectorAlt;
+      if (state.selectorAltIframe) binding.selectorAltIframe = state.selectorAltIframe;
       finish(binding);
     }
 
@@ -143,15 +154,21 @@ function openElementModal(targetEl, bindingType, pageUrl) {
         return;
       }
       // Click the element to toggle its state
-      targetEl.click();
+      if (isDescriptor) {
+        dispatchToIframe(targetEl.iframeSelector, targetEl.selector, null);
+      } else {
+        targetEl.click();
+      }
       // Hide modal + overlay while user picks alternate element
       modal.remove();
       if (activeOverlay) activeOverlay.remove();
-      resolve({ needsAlt: true, onAltElement: onAltElement });
+      if (onNeedsAlt) onNeedsAlt(onAltElement);
     }
 
     function onAltElement(altEl) {
-      state.selectorAlt = getSelector(altEl);
+      const isIframeAlt = !(altEl instanceof Element);
+      state.selectorAlt = isIframeAlt ? altEl.selector : getSelector(altEl);
+      if (isIframeAlt) state.selectorAltIframe = altEl.iframeSelector;
       // Re-show modal and overlay to continue the flow
       document.body.appendChild(activeOverlay);
       document.body.appendChild(modal);
@@ -786,7 +803,9 @@ let activeOverlay = null;
 function createModal() {
   const overlay = document.createElement("div");
   overlay.className = "bindy-overlay";
+  overlay.tabIndex = -1;
   document.body.appendChild(overlay);
+  overlay.focus({ preventScroll: true });
   activeOverlay = overlay;
 
   const modal = document.createElement("div");

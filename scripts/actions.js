@@ -2,14 +2,59 @@ function executeBinding(binding, ctx) {
   const type = binding.type || "click";
   switch (type) {
     case "click": {
-      const el = safeQuery(binding.selector);
-      const alt = binding.selectorAlt ? safeQuery(binding.selectorAlt) : null;
-      const target = (el && isVisible(el)) ? el : alt;
-      if (!target) return false;
-      if (isTypingTarget(target)) {
-        target.focus();
+      const primaryIframe = binding.iframe || null;
+      const altIframe =
+        binding.selectorAlt && binding.selectorAltIframe
+          ? binding.selectorAltIframe
+          : null;
+      const crossContext = !!binding.selectorAlt && primaryIframe !== altIframe;
+
+      if (!crossContext) {
+        // Same context: let one frame handle primary + alt with fallback logic.
+        if (primaryIframe) {
+          return dispatchToIframe(
+            primaryIframe,
+            binding.selector,
+            binding.selectorAlt || null,
+          );
+        }
+        const el = safeQuery(binding.selector);
+        const alt = binding.selectorAlt ? safeQuery(binding.selectorAlt) : null;
+        const target = (el && isVisible(el)) ? el : (alt && isVisible(alt)) ? alt : el || alt;
+        if (!target) return false;
+        if (isTypingTarget(target)) {
+          target.focus();
+        } else {
+          target.click();
+        }
+        return true;
+      }
+
+      // Cross-context: primary and alt live in different frames.
+      // Dispatch to each independently; each fires only if its element is visible.
+      if (primaryIframe) {
+        dispatchToIframe(primaryIframe, binding.selector, null);
       } else {
-        target.click();
+        const el = safeQuery(binding.selector);
+        if (el) {
+          if (isTypingTarget(el)) {
+            el.focus();
+          } else {
+            el.click();
+          }
+        }
+      }
+      if (altIframe) {
+        dispatchToIframe(altIframe, binding.selectorAlt, null);
+      } else {
+        const alt = safeQuery(binding.selectorAlt);
+        if (alt && isVisible(alt)) {
+          if (isTypingTarget(alt)) {
+            alt.focus();
+          } else {
+            alt.click();
+          }
+        }
       }
       return true;
     }
@@ -61,8 +106,18 @@ function executeBinding(binding, ctx) {
     case "changeLayout":
       openLayoutPicker();
       return true;
+    case "openSettings":
+      openSettingsPicker();
+      return true;
   }
   return false;
+}
+
+function openSettingsPicker() {
+  openListModal("Settings", ["Theme", "Layout"], (i) => {
+    if (i === 0) openThemePicker();
+    else openLayoutPicker();
+  });
 }
 
 function openThemePicker() {
@@ -87,7 +142,8 @@ function findMatchingBinding(bindings, e) {
 
 function isVisible(el) {
   if (!el) return false;
-  if (el.offsetParent === null && getComputedStyle(el).position !== "fixed") return false;
+  if (el.offsetParent === null && getComputedStyle(el).position !== "fixed")
+    return false;
   const rect = el.getBoundingClientRect();
   return rect.width > 0 && rect.height > 0;
 }

@@ -15,10 +15,11 @@ Emulation doesn't always work as we can only send synthetic keyboard events and 
 - [x] edit / remove hotkeys
 - [ ] import / export
 - [x] new actions (forward, back, )
-- [ ] iframes
+- [x] iframes
 - [x] bug where focus -> hide doesnt hide on first press
 - [x] separator on side bar is boofed
 - [x] cant hide sidebar
 - [ ] move sidebar
-- [ ] instead of theme/layout hotkeys just have settings hotkey with modals (maybe both?)
+- [x] instead of theme/layout hotkeys just have settings hotkey with modals (maybe both?)
 - [ ] tweak arc theme
+- [ ] recompute path on navigation

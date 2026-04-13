@@ -27,6 +27,13 @@ const DEFAULT_BINDINGS = [
     builtin: true,
     mode: "pinned",
   },
+  {
+    hotkey: "ctrl+s",
+    type: "openSettings",
+    name: "settings",
+    builtin: true,
+    mode: "pinned",
+  },
 ];
 
 function splitBindings(allBindings) {
@@ -47,9 +54,7 @@ function splitBindings(allBindings) {
   return { defaults, userBindings };
 }
 
-function init() {
-  if (window.top !== window) return;
-
+function initTopFrame() {
   let bindingMode = false;
   let awaitingClick = null;
   let selectedElement = null;
@@ -96,6 +101,7 @@ function init() {
 
   function toggleBindingMode() {
     bindingMode = !bindingMode;
+    notifyIframesBindingMode(bindingMode);
     setBarActive(bar, bindingMode);
     if (!bindingMode) {
       awaitingClick = null;
@@ -148,13 +154,42 @@ function init() {
     selectedElement = target;
     target.classList.add("bindy-selected");
 
-    const result = await openElementModal(target, bindingType, pageUrl);
+    const result = await openElementModal(target, bindingType, pageUrl, {
+      onNeedsAlt(onAltElement) {
+        awaitingClick = { onAltElement };
+        notifyIframesBindingMode(true);
+        setBarMessage(bar, "Click the alternate element");
+      },
+    });
     clearSelection();
-    if (result && result.needsAlt) {
-      awaitingClick = { onAltElement: result.onAltElement };
-      setBarMessage(bar, "Click the alternate element");
+    if (result) {
+      await addBinding(result.scope, result);
+    }
+    if (bindingMode) toggleBindingMode();
+  }
+
+  async function handleIframeElementPicked({ selector, iframeSelector }) {
+    if (!bindingMode || !awaitingClick) return;
+
+    if (awaitingClick.onAltElement) {
+      const { onAltElement } = awaitingClick;
+      awaitingClick = null;
+      setBarMessage(bar, "Alternate element captured");
+      onAltElement({ selector, iframeSelector });
       return;
     }
+
+    const { bindingType } = awaitingClick;
+    awaitingClick = null;
+
+    const result = await openElementModal({ selector, iframeSelector }, bindingType, pageUrl, {
+      onNeedsAlt(onAltElement) {
+        awaitingClick = { onAltElement };
+        notifyIframesBindingMode(true);
+        setBarMessage(bar, "Click the alternate element");
+      },
+    });
+    clearSelection();
     if (result) {
       await addBinding(result.scope, result);
     }
@@ -240,6 +275,7 @@ function init() {
 
   document.addEventListener("click", handleClick, true);
   document.addEventListener("keydown", handleKeys, true);
+  onIframeElementPicked(handleIframeElementPicked);
 
   // After cmd+tab, focus the invisible trap so keydown events reach the
   // document without activating focused-mode bindings on the bar.
@@ -249,6 +285,14 @@ function init() {
       focusTrap.focus({ preventScroll: true });
     }
   });
+}
+
+function init() {
+  if (window.top !== window) {
+    initChildFrame();
+  } else {
+    initTopFrame();
+  }
 }
 
 init();

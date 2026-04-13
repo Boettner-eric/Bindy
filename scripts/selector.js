@@ -1,4 +1,4 @@
-const STABLE_ATTRS = ["data-testid", "data-test", "name", "aria-label"];
+const STABLE_ATTRS = ["data-testid", "data-test", "name", "data-title-no-tooltip", "aria-label"];
 
 const INTERACTIVE_TAGS = new Set([
   "A",
