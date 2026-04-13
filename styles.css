@@ -1,0 +1,267 @@
+@font-face {
+  font-family: "Bindy Fira Code";
+  src: url("fonts/FiraCode-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+}
+
+:root {
+  --bindy-bg: #2b2836;
+  --bindy-bg-deep: #1e1c26;
+  --bindy-text: #dce7fd;
+  --bindy-muted: #655e7f;
+  --bindy-accent: #bd93f9;
+  --bindy-accent-glow: rgba(189, 147, 249, 0.4);
+  --bindy-highlight: #3b3750;
+  --bindy-overlay: rgba(0, 0, 0, 0.3);
+  --bindy-modal-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --bindy-font: "Bindy Fira Code", monospace;
+}
+
+/* Maps to variables Arc injects on tabs — see https://arc.net/colors.html */
+.bindy-theme-arc {
+  /*
+   * `background` is the broad tab canvas; Arc’s flat chrome (sidebar pills, etc.) aligns
+   * better with simple-color / backgroundExtra. Use palette background for recessed fields.
+   */
+  --bindy-bg: var(
+    --arc-background-simple-color,
+    var(
+      --arc-palette-backgroundExtra,
+      var(--arc-palette-background, #2b2836)
+    )
+  );
+  --bindy-bg-deep: var(
+    --arc-palette-background,
+    var(--arc-palette-backgroundExtra, #1e1c26)
+  );
+  --bindy-text: var(--arc-palette-foregroundPrimary, #dce7fd);
+  /* Arc chrome leans on secondary for structure; tertiary alone is often too faint on borders */
+  --bindy-muted: var(
+    --arc-palette-foregroundSecondary,
+    var(--arc-palette-foregroundTertiary, #655e7f)
+  );
+  --bindy-accent: var(--arc-palette-focus, #bd93f9);
+  --bindy-accent-glow: color-mix(
+    in srgb,
+    var(--arc-palette-focus, #bd93f9) 42%,
+    transparent
+  );
+  --bindy-highlight: var(--arc-palette-hover, #3b3750);
+  /* Space-tinted dimmer instead of flat gray */
+  --bindy-overlay: color-mix(
+    in srgb,
+    var(--arc-palette-background, #1a1520) 40%,
+    #000000
+  );
+  --bindy-modal-shadow:
+    0 20px 56px
+      color-mix(
+        in srgb,
+        var(--arc-palette-maxContrastColor, #000000) 34%,
+        transparent
+      ),
+    0 0 0 1px
+      color-mix(
+        in srgb,
+        var(--arc-palette-foregroundPrimary, #ffffff) 9%,
+        transparent
+      );
+}
+
+.bindy-bar {
+  position: fixed !important;
+  bottom: 10px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  background-color: var(--bindy-bg) !important;
+  color: var(--bindy-text) !important;
+  padding: 6px 12px !important;
+  border-radius: 6px !important;
+  border: 1px solid var(--bindy-muted) !important;
+  font-family: var(--bindy-font) !important;
+  font-size: 12px !important;
+  z-index: 2147483647 !important;
+  display: block;
+}
+.bindy-bar:focus {
+  outline: none !important;
+  border-color: var(--bindy-accent) !important;
+}
+
+.bindy-focus-trap {
+  position: fixed !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+.bindy-bar--hidden {
+  display: none !important;
+}
+.bindy-bar--active {
+  border-color: var(--bindy-accent) !important;
+  box-shadow: 0 0 8px var(--bindy-accent-glow) !important;
+}
+
+
+
+/* Sidebar layout */
+.bindy-bar--sidebar {
+  bottom: auto !important;
+  left: auto !important;
+  transform: none !important;
+  right: 10px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 8px 10px !important;
+  gap: 2px !important;
+}
+
+.bindy-bar--sidebar.bindy-bar--hidden {
+  display: none !important;
+}
+
+.bindy-bar--sidebar .bindy-chip {
+  margin-left: 0 !important;
+  display: block !important;
+  white-space: nowrap !important;
+}
+.bindy-bar--sidebar .bindy-chip-sep {
+  margin-left: 0 !important;
+  text-align: center !important;
+  display: none;
+}
+.bindy-bar--sidebar .bindy-chip--unpinned {
+  display: none !important;
+}
+.bindy-bar--sidebar:focus .bindy-chip--unpinned {
+  display: block !important;
+}
+.bindy-bar--sidebar:focus .bindy-chip--focused {
+  color: var(--bindy-accent) !important;
+}
+.bindy-bar--sidebar:focus .bindy-chip-sep {
+  display: block !important;
+}
+
+.bindy-chip {
+  margin-left: 8px;
+  color: var(--bindy-text);
+}
+.bindy-chip--unpinned {
+  display: none;
+}
+.bindy-bar:focus .bindy-chip--unpinned {
+  display: inline;
+  color: var(--bindy-muted);
+}
+.bindy-bar:focus .bindy-chip--focused {
+  color: var(--bindy-accent);
+}
+.bindy-chip-sep {
+  display: none;
+  margin-left: 8px;
+  color: var(--bindy-muted);
+}
+.bindy-chip-sep::before {
+  content: "|";
+}
+.bindy-bar--sidebar .bindy-chip-sep::before {
+  content: "-";
+}
+.bindy-bar:focus .bindy-chip-sep {
+  display: inline;
+}
+
+.bindy-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background-color: var(--bindy-overlay) !important;
+  backdrop-filter: blur(2px) !important;
+  z-index: 2147483646 !important;
+}
+
+.bindy-theme-arc .bindy-overlay {
+  backdrop-filter: blur(14px) saturate(1.15) !important;
+}
+
+.bindy-theme-arc .bindy-bar {
+  border-radius: 11px !important;
+}
+
+.bindy-theme-arc .bindy-modal {
+  border-radius: 14px !important;
+}
+
+.bindy-theme-arc .bindy-modal__input,
+.bindy-theme-arc .bindy-modal__list-item {
+  border-radius: 8px !important;
+}
+
+.bindy-modal {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  background-color: var(--bindy-bg) !important;
+  color: var(--bindy-text) !important;
+  padding: 20px 24px !important;
+  border-radius: 8px !important;
+  font-family: var(--bindy-font) !important;
+  font-size: 14px !important;
+  box-shadow: var(--bindy-modal-shadow) !important;
+  border: 2px solid var(--bindy-accent) !important;
+  z-index: 2147483647 !important;
+  min-width: 260px !important;
+  text-align: center !important;
+}
+.bindy-modal__title {
+  margin-bottom: 12px;
+}
+.bindy-modal__input {
+  width: 80% !important;
+  box-sizing: border-box !important;
+  padding: 8px 12px !important;
+  border-radius: 4px !important;
+  border: 1px solid var(--bindy-muted) !important;
+  background-color: var(--bindy-bg-deep) !important;
+  color: var(--bindy-text) !important;
+  font-family: inherit !important;
+  font-size: 13px !important;
+  outline: none !important;
+}
+.bindy-modal__input:focus {
+  border-color: var(--bindy-accent);
+}
+.bindy-modal__hint {
+  font-size: 11px;
+  color: var(--bindy-muted);
+  margin-top: 10px;
+}
+.bindy-modal__list {
+  text-align: left;
+  margin: 8px 0;
+}
+.bindy-modal__list-item {
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--bindy-text);
+}
+.bindy-modal__list-item:hover,
+.bindy-modal__list-item--active {
+  background-color: var(--bindy-highlight);
+}
+
+.bindy-selected {
+  outline: 2px solid var(--bindy-accent) !important;
+  outline-offset: 2px !important;
+}
