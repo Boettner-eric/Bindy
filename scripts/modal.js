@@ -406,6 +406,10 @@ function openEditModal(pageBindings, defaults, originalDefaults) {
           finish(null);
         }
       }
+      activeCancel = () => {
+        document.removeEventListener("keydown", handleEscapeKey, true);
+        finish(null);
+      };
       document.addEventListener("keydown", handleEscapeKey, true);
 
       document.body.appendChild(modal);
@@ -804,6 +808,9 @@ function createModal() {
   const overlay = document.createElement("div");
   overlay.className = "bindy-overlay";
   overlay.tabIndex = -1;
+  overlay.addEventListener("click", () => {
+    if (activeCancel) activeCancel();
+  });
   document.body.appendChild(overlay);
   overlay.focus({ preventScroll: true });
   activeOverlay = overlay;
@@ -891,12 +898,13 @@ function showListPicker(modal, labels, onSelect, onCancel) {
     }
   }
 
-  document.addEventListener("keydown", handleKeydown, true);
-
   function cleanup() {
     document.removeEventListener("keydown", handleKeydown, true);
     list.remove();
   }
+
+  activeCancel = () => { cleanup(); onCancel(); };
+  document.addEventListener("keydown", handleKeydown, true);
 }
 
 function showNameStep(modal, onName, onCancel) {
@@ -955,21 +963,25 @@ function showKeyCaptureStep(modal, titleText, hintText, onKey, onCancel) {
   hint.textContent = hintText;
   modal.appendChild(hint);
 
+  function cleanup() {
+    document.removeEventListener("keydown", handleKeydown, true);
+    hint.remove();
+  }
+
   function handleKeydown(ev) {
     ev.preventDefault();
     ev.stopPropagation();
     if (ev.key === "Escape") {
-      document.removeEventListener("keydown", handleKeydown, true);
-      hint.remove();
+      cleanup();
       onCancel(null);
       return;
     }
     if (isModifierKey(ev.key)) return;
-    document.removeEventListener("keydown", handleKeydown, true);
-    hint.remove();
+    cleanup();
     onKey(formatHotkey(ev));
   }
 
+  activeCancel = () => { cleanup(); onCancel(null); };
   document.addEventListener("keydown", handleKeydown, true);
 }
 

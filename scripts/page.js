@@ -60,7 +60,19 @@ function initTopFrame() {
   let selectedElement = null;
   let pageBindings = [];
   let effectiveDefaults = [...DEFAULT_BINDINGS];
-  const pageUrl = `${window.location.host}${window.location.pathname}`;
+  function getPagePath() {
+    return `${window.location.host}${window.location.pathname}`;
+  }
+
+  function handleNavigation() {
+    getBindings(getPagePath()).then(applyBindings);
+  }
+
+  if (window.navigation) {
+    window.navigation.addEventListener("navigatesuccess", handleNavigation);
+  } else {
+    window.addEventListener("popstate", handleNavigation);
+  }
 
   const bar = createBar();
   const focusTrap = createFocusTrap();
@@ -74,7 +86,7 @@ function initTopFrame() {
 
   async function loadInitialState() {
     const [allBindings, hidden, theme, layout] = await Promise.all([
-      getBindings(pageUrl),
+      getBindings(getPagePath()),
       getBarHidden(),
       getTheme(),
       getLayout(),
@@ -88,7 +100,7 @@ function initTopFrame() {
   loadInitialState();
 
   onBarHiddenChange((hidden) => setBarHidden(bar, hidden));
-  onBindingsChange(pageUrl, applyBindings);
+  onBindingsChange(applyBindings);
   onThemeChange((theme) => applyTheme(theme));
   onLayoutChange((layout) => applyLayout(bar, layout));
 
@@ -154,7 +166,7 @@ function initTopFrame() {
     selectedElement = target;
     target.classList.add("bindy-selected");
 
-    const result = await openElementModal(target, bindingType, pageUrl, {
+    const result = await openElementModal(target, bindingType, getPagePath(), {
       onNeedsAlt(onAltElement) {
         awaitingClick = { onAltElement };
         notifyIframesBindingMode(true);
@@ -182,7 +194,7 @@ function initTopFrame() {
     const { bindingType } = awaitingClick;
     awaitingClick = null;
 
-    const result = await openElementModal({ selector, iframeSelector }, bindingType, pageUrl, {
+    const result = await openElementModal({ selector, iframeSelector }, bindingType, getPagePath(), {
       onNeedsAlt(onAltElement) {
         awaitingClick = { onAltElement };
         notifyIframesBindingMode(true);
@@ -276,6 +288,21 @@ function initTopFrame() {
   document.addEventListener("click", handleClick, true);
   document.addEventListener("keydown", handleKeys, true);
   onIframeElementPicked(handleIframeElementPicked);
+
+  window.addEventListener("message", (evt) => {
+    const msg = evt.data;
+    if (!msg || msg.type !== "bindy-keydown") return;
+    handleKeys({
+      key: msg.key,
+      ctrlKey: msg.ctrlKey,
+      metaKey: msg.metaKey,
+      shiftKey: msg.shiftKey,
+      altKey: msg.altKey,
+      target: document.body,
+      preventDefault() {},
+      stopPropagation() {},
+    });
+  });
 
   // After cmd+tab, focus the invisible trap so keydown events reach the
   // document without activating focused-mode bindings on the bar.

@@ -49,6 +49,18 @@ function initChildFrame() {
   }
 
   window.addEventListener("message", handleMessage);
+
+  document.addEventListener("keydown", (e) => {
+    if (isTypingTarget(e.target)) return;
+    window.parent.postMessage({
+      type: "bindy-keydown",
+      key: e.key,
+      ctrlKey: e.ctrlKey,
+      metaKey: e.metaKey,
+      shiftKey: e.shiftKey,
+      altKey: e.altKey,
+    }, "*");
+  }, true);
 }
 
 // Top frame: broadcast binding mode changes to all child iframes

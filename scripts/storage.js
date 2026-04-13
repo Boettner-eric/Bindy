@@ -17,9 +17,10 @@ function addBinding(scope, binding) {
   });
 }
 
-function onBindingsChange(pageUrl, cb) {
+function onBindingsChange(cb) {
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== "local" || !changes.bindings) return;
+    const pageUrl = `${window.location.host}${window.location.pathname}`;
     cb(matchBindings(changes.bindings.newValue || {}, pageUrl));
   });
 }

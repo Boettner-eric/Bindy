@@ -48,25 +48,6 @@
     transparent
   );
   --bindy-highlight: var(--arc-palette-hover, #3b3750);
-  /* Space-tinted dimmer instead of flat gray */
-  --bindy-overlay: color-mix(
-    in srgb,
-    var(--arc-palette-background, #1a1520) 40%,
-    #000000
-  );
-  --bindy-modal-shadow:
-    0 20px 56px
-      color-mix(
-        in srgb,
-        var(--arc-palette-maxContrastColor, #000000) 34%,
-        transparent
-      ),
-    0 0 0 1px
-      color-mix(
-        in srgb,
-        var(--arc-palette-foregroundPrimary, #ffffff) 9%,
-        transparent
-      );
 }
 
 .bindy-bar {
@@ -178,6 +159,7 @@
 }
 
 .bindy-overlay {
+  outline: none !important;
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
@@ -188,9 +170,6 @@
   z-index: 2147483646 !important;
 }
 
-.bindy-theme-arc .bindy-overlay {
-  backdrop-filter: blur(14px) saturate(1.15) !important;
-}
 
 .bindy-theme-arc .bindy-bar {
   border-radius: 11px !important;
