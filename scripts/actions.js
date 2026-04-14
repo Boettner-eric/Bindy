@@ -98,7 +98,7 @@ function executeBinding(binding, ctx) {
       ctx.focusBar();
       return true;
     case "toggleBarHidden":
-      toggleBarHidden();
+      ctx.toggleBarHidden();
       return true;
     case "changeTheme":
       openThemePicker();

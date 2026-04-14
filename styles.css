@@ -41,10 +41,10 @@
     --arc-palette-foregroundSecondary,
     var(--arc-palette-foregroundTertiary, #655e7f)
   );
-  --bindy-accent: var(--arc-palette-focus, #bd93f9);
+  --bindy-accent: color-mix(in oklch, var(--arc-palette-focus, #bd93f9), white 30%);
   --bindy-accent-glow: color-mix(
     in srgb,
-    var(--arc-palette-focus, #bd93f9) 42%,
+    color-mix(in oklch, var(--arc-palette-focus, #bd93f9), white 30%) 42%,
     transparent
   );
   --bindy-highlight: var(--arc-palette-hover, #3b3750);
@@ -78,8 +78,9 @@
   opacity: 0 !important;
   pointer-events: none !important;
 }
-.bindy-bar--hidden {
-  display: none !important;
+.bindy-bar--hidden:not(:focus) {
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 .bindy-bar--active {
   border-color: var(--bindy-accent) !important;
@@ -102,8 +103,9 @@
   gap: 2px !important;
 }
 
-.bindy-bar--sidebar.bindy-bar--hidden {
-  display: none !important;
+.bindy-bar--sidebar.bindy-bar--hidden:not(:focus) {
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 .bindy-bar--sidebar .bindy-chip {

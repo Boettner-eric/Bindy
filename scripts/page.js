@@ -60,6 +60,7 @@ function initTopFrame() {
   let selectedElement = null;
   let pageBindings = [];
   let effectiveDefaults = [...DEFAULT_BINDINGS];
+  let barWasHidden = false;
   function getPagePath() {
     return `${window.location.host}${window.location.pathname}`;
   }
@@ -216,15 +217,17 @@ function initTopFrame() {
     if (document.activeElement === bar) {
       bar.blur();
     } else {
-      if (bar.classList.contains("bindy-bar--hidden")) {
-        setBarHidden(bar, false);
-        toggleBarHidden();
-      }
       bar.focus({ preventScroll: true });
     }
   }
 
-  const ctx = { toggleBindingMode, editBindings, focusBar };
+  function doToggleBarHidden() {
+    const temporarilyShown = document.activeElement === bar && bar.classList.contains("bindy-bar--hidden");
+    bar.blur();
+    if (!temporarilyShown) toggleBarHidden();
+  }
+
+  const ctx = { toggleBindingMode, editBindings, focusBar, toggleBarHidden: doToggleBarHidden };
 
   function handleKeys(e) {
     if (activeModal) return;
