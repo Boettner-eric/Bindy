@@ -57,10 +57,17 @@ function setBarActive(bar, active) {
   bar.classList.toggle("bindy-bar--active", active);
 }
 
-function setBarMessage(bar, text) {
-  bar.textContent = "";
-  const msg = document.createElement("span");
-  msg.className = "bindy-bar-message";
-  msg.textContent = text;
-  bar.appendChild(msg);
+function createDirections() {
+  const el = document.createElement("div");
+  el.className = "bindy-directions bindy-directions--hidden";
+  return el;
+}
+
+function showDirections(el, text) {
+  el.textContent = text;
+  el.classList.remove("bindy-directions--hidden");
+}
+
+function hideDirections(el) {
+  el.classList.add("bindy-directions--hidden");
 }

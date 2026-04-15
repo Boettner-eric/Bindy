@@ -76,6 +76,7 @@ function initTopFrame() {
   }
 
   const bar = createBar();
+  const directions = createDirections();
   const focusTrap = createFocusTrap();
 
   function applyBindings(allBindings) {
@@ -120,6 +121,7 @@ function initTopFrame() {
       awaitingClick = null;
       clearSelection();
       closeHotkeyModal();
+      hideDirections(directions);
       renderBar(bar, effectiveDefaults, pageBindings);
     } else {
       startBindFlow();
@@ -135,7 +137,7 @@ function initTopFrame() {
 
     if (result.needsElement) {
       awaitingClick = { bindingType: result.bindingType };
-      setBarMessage(bar, "Click an element or press Escape to cancel");
+      showDirections(directions, "Click an element · Esc to cancel");
     } else {
       await addBinding(result.scope, result);
       if (bindingMode) toggleBindingMode();
@@ -155,7 +157,7 @@ function initTopFrame() {
       clearSelection();
       selectedElement = target;
       target.classList.add("bindy-selected");
-      setBarMessage(bar, "Alternate element captured");
+      showDirections(directions, "Alternate element captured");
       onAltElement(target);
       return;
     }
@@ -171,7 +173,7 @@ function initTopFrame() {
       onNeedsAlt(onAltElement) {
         awaitingClick = { onAltElement };
         notifyIframesBindingMode(true);
-        setBarMessage(bar, "Click the alternate element");
+        showDirections(directions, "Click the alternate element");
       },
     });
     clearSelection();
@@ -187,7 +189,7 @@ function initTopFrame() {
     if (awaitingClick.onAltElement) {
       const { onAltElement } = awaitingClick;
       awaitingClick = null;
-      setBarMessage(bar, "Alternate element captured");
+      showDirections(directions, "Alternate element captured");
       onAltElement({ selector, iframeSelector });
       return;
     }
@@ -199,7 +201,7 @@ function initTopFrame() {
       onNeedsAlt(onAltElement) {
         awaitingClick = { onAltElement };
         notifyIframesBindingMode(true);
-        setBarMessage(bar, "Click the alternate element");
+        showDirections(directions, "Click the alternate element");
       },
     });
     clearSelection();
@@ -239,7 +241,7 @@ function initTopFrame() {
       return;
     }
 
-    if (isTypingTarget(e.target)) return;
+    if (isTypingTarget(e.target) && !e.ctrlKey && !e.metaKey && !e.altKey) return;
 
     const barFocused = document.activeElement === bar;
 
@@ -282,6 +284,7 @@ function initTopFrame() {
   function mount() {
     if (!document.body) return;
     document.body.appendChild(bar);
+    document.body.appendChild(directions);
     document.body.appendChild(focusTrap);
   }
 
