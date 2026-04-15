@@ -1,3 +1,12 @@
+const fontStyle = document.createElement("style");
+fontStyle.textContent = `@font-face {
+  font-family: "Bindy Fira Code";
+  src: url("${chrome.runtime.getURL("fonts/FiraCode-Regular.woff2")}") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+}`;
+document.head.appendChild(fontStyle);
+
 const DEFAULT_BINDINGS = [
   {
     hotkey: "ctrl+b",
@@ -61,6 +70,7 @@ function initTopFrame() {
   let pageBindings = [];
   let effectiveDefaults = [...DEFAULT_BINDINGS];
   let barWasHidden = false;
+  let previousFocus = null;
   function getPagePath() {
     return `${window.location.host}${window.location.pathname}`;
   }
@@ -218,14 +228,26 @@ function initTopFrame() {
   function focusBar() {
     if (document.activeElement === bar) {
       bar.blur();
+      restorePreviousFocus();
     } else {
+      previousFocus = document.activeElement;
       bar.focus({ preventScroll: true });
     }
   }
 
+  function restorePreviousFocus() {
+    const el = previousFocus;
+    previousFocus = null;
+    if (el && document.body.contains(el)) {
+      el.focus({ preventScroll: true });
+    }
+  }
+
   function doToggleBarHidden() {
-    const temporarilyShown = document.activeElement === bar && bar.classList.contains("bindy-bar--hidden");
+    const wasBarFocused = document.activeElement === bar;
+    const temporarilyShown = wasBarFocused && bar.classList.contains("bindy-bar--hidden");
     bar.blur();
+    if (wasBarFocused) restorePreviousFocus();
     if (!temporarilyShown) toggleBarHidden();
   }
 
@@ -249,6 +271,7 @@ function initTopFrame() {
       e.preventDefault();
       e.stopPropagation();
       bar.blur();
+      restorePreviousFocus();
       return;
     }
 
@@ -277,6 +300,11 @@ function initTopFrame() {
   }
 
   // Click bar to deliberately focus it (activates focused-mode bindings)
+  bar.addEventListener("mousedown", () => {
+    if (document.activeElement !== bar) {
+      previousFocus = document.activeElement;
+    }
+  });
   bar.addEventListener("click", () => {
     bar.focus({ preventScroll: true });
   });

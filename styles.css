@@ -1,10 +1,3 @@
-@font-face {
-  font-family: "Bindy Fira Code";
-  src: url("fonts/FiraCode-Regular.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-}
-
 :root {
   --bindy-bg: #2b2836;
   --bindy-bg-deep: #1e1c26;

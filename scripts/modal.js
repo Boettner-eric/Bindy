@@ -1,5 +1,6 @@
 let activeModal = null;
 let activeCancel = null;
+let preFocusEl = null;
 
 const BINDING_TYPES = [
   { type: "click", label: "Click element", needsElement: true },
@@ -812,6 +813,7 @@ function createModal() {
     if (activeCancel) activeCancel();
   });
   document.body.appendChild(overlay);
+  preFocusEl = document.activeElement;
   overlay.focus({ preventScroll: true });
   activeOverlay = overlay;
 
@@ -829,6 +831,11 @@ function teardownModal(modal) {
     if (activeOverlay) {
       activeOverlay.remove();
       activeOverlay = null;
+    }
+    const el = preFocusEl;
+    preFocusEl = null;
+    if (el && document.body.contains(el)) {
+      el.focus({ preventScroll: true });
     }
   }
 }
