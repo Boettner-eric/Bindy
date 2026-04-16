@@ -12,13 +12,32 @@ function createFocusTrap() {
   return trap;
 }
 
+const MODE_ORDER = { pinned: 0, focused: 1, background: 2 };
+
+function hasMainModifier(hotkey) {
+  return /^(ctrl|cmd|meta)\+/.test(hotkey);
+}
+
+function sortBindings(bindings) {
+  return [...bindings].sort((a, b) => {
+    const modeA = MODE_ORDER[a.mode] ?? 1;
+    const modeB = MODE_ORDER[b.mode] ?? 1;
+    if (modeA !== modeB) return modeA - modeB;
+    const modA = hasMainModifier(a.hotkey) ? 1 : 0;
+    const modB = hasMainModifier(b.hotkey) ? 1 : 0;
+    if (modA !== modB) return modA - modB;
+    return a.hotkey.localeCompare(b.hotkey);
+  });
+}
+
 function renderBar(bar, defaults, bindingsForPage) {
   bar.textContent = "";
 
-  const all = [
+  const all = sortBindings([
     ...(defaults || []).map((b) => ({ ...b, isDefault: true })),
     ...(bindingsForPage || []),
-  ];
+  ]);
+
   const pinned = all.filter((b) => b.mode === "pinned");
   const unpinned = all.filter((b) => b.mode !== "pinned");
 

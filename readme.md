@@ -2,24 +2,15 @@
 
 A chrome extension to allow users to define custom keyboard shortcuts on any website
 
-# Note
+![a screenshot of bindy](images/image.png)
+
+## Installation
+
+1. clone this repo or download it via code -> Download Zip (unzip it if you download it)
+2. got to `chrome://extensions` and enable Developer mode in the top right corner
+3. click `load unpacked` and select the bindy folder
+4. press `ctrl + f` to focus bindy and start binding new shortcuts!
+
+## Warning
 
 Emulation doesn't always work as we can only send synthetic keyboard events and some sites will ignore them. (Youtube). An easy work around is to use click element instead
-
-# Roadmap
-
-- [ ] custom themes
-- [x] global/focus/local/path
-- [x] bar styling / pin mode
-- [ ] vim mode
-- [x] edit / remove hotkeys
-- [ ] import / export
-- [x] new actions (forward, back, )
-- [x] iframes
-- [x] bug where focus -> hide doesnt hide on first press
-- [x] separator on side bar is boofed
-- [x] cant hide sidebar
-- [ ] move sidebar
-- [x] instead of theme/layout hotkeys just have settings hotkey with modals (maybe both?)
-- [ ] tweak arc theme
-- [ ] recompute path on navigation
