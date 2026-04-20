@@ -154,6 +154,22 @@ function initTopFrame() {
     }
   }
 
+  async function completeElementPick(targetEl) {
+    const { bindingType } = awaitingClick;
+    awaitingClick = null;
+
+    const result = await openElementModal(targetEl, bindingType, getPagePath(), {
+      onNeedsAlt(onAltElement) {
+        awaitingClick = { onAltElement };
+        notifyIframesBindingMode(true);
+        showDirections(directions, "Click the alternate element");
+      },
+    });
+    clearSelection();
+    if (result) await addBinding(result.scope, result);
+    if (bindingMode) toggleBindingMode();
+  }
+
   async function handleClick(e) {
     if (!bindingMode || !awaitingClick) return;
     const target = findInteractiveAncestor(e.target);
@@ -172,25 +188,10 @@ function initTopFrame() {
       return;
     }
 
-    const { bindingType } = awaitingClick;
-    awaitingClick = null;
-
     clearSelection();
     selectedElement = target;
     target.classList.add("bindy-selected");
-
-    const result = await openElementModal(target, bindingType, getPagePath(), {
-      onNeedsAlt(onAltElement) {
-        awaitingClick = { onAltElement };
-        notifyIframesBindingMode(true);
-        showDirections(directions, "Click the alternate element");
-      },
-    });
-    clearSelection();
-    if (result) {
-      await addBinding(result.scope, result);
-    }
-    if (bindingMode) toggleBindingMode();
+    await completeElementPick(target);
   }
 
   async function handleIframeElementPicked({ selector, iframeSelector }) {
@@ -204,21 +205,7 @@ function initTopFrame() {
       return;
     }
 
-    const { bindingType } = awaitingClick;
-    awaitingClick = null;
-
-    const result = await openElementModal({ selector, iframeSelector }, bindingType, getPagePath(), {
-      onNeedsAlt(onAltElement) {
-        awaitingClick = { onAltElement };
-        notifyIframesBindingMode(true);
-        showDirections(directions, "Click the alternate element");
-      },
-    });
-    clearSelection();
-    if (result) {
-      await addBinding(result.scope, result);
-    }
-    if (bindingMode) toggleBindingMode();
+    await completeElementPick({ selector, iframeSelector });
   }
 
   async function editBindings() {
@@ -256,7 +243,7 @@ function initTopFrame() {
   function handleKeys(e) {
     if (activeModal) return;
 
-    if (bindingMode && awaitingClick && e.key === "Escape") {
+    if (bindingMode && awaitingClick && isPlainEscape(e)) {
       e.preventDefault();
       e.stopPropagation();
       toggleBindingMode();
@@ -267,7 +254,7 @@ function initTopFrame() {
 
     const barFocused = document.activeElement === bar;
 
-    if (barFocused && e.key === "Escape") {
+    if (barFocused && isPlainEscape(e)) {
       e.preventDefault();
       e.stopPropagation();
       bar.blur();

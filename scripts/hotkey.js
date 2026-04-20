@@ -13,3 +13,7 @@ function formatHotkey(e) {
 function isModifierKey(key) {
   return MODIFIER_KEYS.includes(key);
 }
+
+function isPlainEscape(e) {
+  return e.key === "Escape" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey;
+}

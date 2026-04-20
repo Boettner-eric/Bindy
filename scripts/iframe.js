@@ -7,11 +7,7 @@ function initChildFrame() {
     const alt = selectorAlt ? safeQuery(selectorAlt) : null;
     const target = (el && isVisible(el)) ? el : alt;
     if (!target) return;
-    if (isTypingTarget(target)) {
-      target.focus();
-    } else {
-      target.click();
-    }
+    activateElement(target);
   }
 
   function handleBindClick(e) {

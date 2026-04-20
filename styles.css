@@ -29,17 +29,9 @@
     var(--arc-palette-backgroundExtra, #1e1c26)
   );
   --bindy-text: var(--arc-palette-foregroundPrimary, #dce7fd);
-  /* Arc chrome leans on secondary for structure; tertiary alone is often too faint on borders */
-  --bindy-muted: var(
-    --arc-palette-foregroundSecondary,
-    var(--arc-palette-foregroundTertiary, #655e7f)
-  );
-  --bindy-accent: color-mix(in oklch, var(--arc-palette-focus, #bd93f9), white 30%);
-  --bindy-accent-glow: color-mix(
-    in srgb,
-    color-mix(in oklch, var(--arc-palette-focus, #bd93f9), white 30%) 42%,
-    transparent
-  );
+  --bindy-muted: var(--arc-palette-subtitle, var(--arc-palette-foregroundTertiary, #655e7f));
+  --bindy-accent: var(--arc-palette-foregroundSecondary, #bd93f9);
+  --bindy-accent-glow: color-mix(in srgb, var(--arc-palette-foregroundSecondary, #bd93f9) 42%, transparent);
   --bindy-highlight: var(--arc-palette-hover, #3b3750);
 }
 

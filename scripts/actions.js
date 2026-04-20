@@ -22,11 +22,7 @@ function executeBinding(binding, ctx) {
         const alt = binding.selectorAlt ? safeQuery(binding.selectorAlt) : null;
         const target = (el && isVisible(el)) ? el : (alt && isVisible(alt)) ? alt : el || alt;
         if (!target) return false;
-        if (isTypingTarget(target)) {
-          target.focus();
-        } else {
-          target.click();
-        }
+        activateElement(target);
         return true;
       }
 
@@ -36,25 +32,13 @@ function executeBinding(binding, ctx) {
         dispatchToIframe(primaryIframe, binding.selector, null);
       } else {
         const el = safeQuery(binding.selector);
-        if (el) {
-          if (isTypingTarget(el)) {
-            el.focus();
-          } else {
-            el.click();
-          }
-        }
+        if (el) activateElement(el);
       }
       if (altIframe) {
         dispatchToIframe(altIframe, binding.selectorAlt, null);
       } else {
         const alt = safeQuery(binding.selectorAlt);
-        if (alt && isVisible(alt)) {
-          if (isTypingTarget(alt)) {
-            alt.focus();
-          } else {
-            alt.click();
-          }
-        }
+        if (alt && isVisible(alt)) activateElement(alt);
       }
       return true;
     }
@@ -108,6 +92,9 @@ function executeBinding(binding, ctx) {
       return true;
     case "openSettings":
       openSettingsPicker();
+      return true;
+    case "blur":
+      if (document.activeElement) document.activeElement.blur();
       return true;
   }
   return false;

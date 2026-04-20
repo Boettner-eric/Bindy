@@ -99,3 +99,11 @@ function isTypingTarget(el) {
   const tag = el.tagName;
   return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
 }
+
+function activateElement(el) {
+  if (isTypingTarget(el)) {
+    el.focus();
+  } else {
+    el.click();
+  }
+}

@@ -16,7 +16,7 @@ const BUILTIN_ACTIONS = [
   { type: "scroll", to: "bottom", label: "scroll to bottom" },
   { type: "scroll", to: "top", label: "scroll to top" },
   { type: "toggleBarHidden", label: "hide bar" },
-  { type: "Blur", label: "blur elements" },
+  { type: "blur", label: "blur" },
   { type: "changeTheme", label: "change theme" },
   { type: "changeLayout", label: "change layout" },
   { type: "openSettings", label: "settings" },
@@ -34,6 +34,13 @@ const MODE_OPTIONS = [
   { label: "Background (hidden, always active)", value: "background" },
   { label: "Focused (visible + active only on focus)", value: "focused" },
 ];
+
+function makeHint(text) {
+  const hint = document.createElement("div");
+  hint.className = "bindy-modal__hint";
+  hint.textContent = text;
+  return hint;
+}
 
 function closeHotkeyModal() {
   if (activeCancel) activeCancel();
@@ -64,10 +71,6 @@ function openTypePickerModal() {
     title.textContent = "New binding";
     modal.appendChild(title);
 
-    const hint = document.createElement("div");
-    hint.className = "bindy-modal__hint";
-    hint.textContent = "j/k to move · Enter to select · Esc to cancel";
-
     function onTypeSelect(i) {
       const picked = BINDING_TYPES[i];
       if (picked.needsElement) {
@@ -84,7 +87,9 @@ function openTypePickerModal() {
       cancel,
     );
 
-    modal.appendChild(hint);
+    modal.appendChild(
+      makeHint("j/k to move · Enter to select · Esc to cancel"),
+    );
     document.body.appendChild(modal);
   });
 }
@@ -130,7 +135,8 @@ function openElementModal(targetEl, bindingType, pageUrl, { onNeedsAlt } = {}) {
       };
       if (state.iframe) binding.iframe = state.iframe;
       if (state.selectorAlt) binding.selectorAlt = state.selectorAlt;
-      if (state.selectorAltIframe) binding.selectorAltIframe = state.selectorAltIframe;
+      if (state.selectorAltIframe)
+        binding.selectorAltIframe = state.selectorAltIframe;
       finish(binding);
     }
 
@@ -185,10 +191,6 @@ function openElementModal(targetEl, bindingType, pageUrl, { onNeedsAlt } = {}) {
     title.textContent = "Add alternate element?";
     modal.appendChild(title);
 
-    const hint = document.createElement("div");
-    hint.className = "bindy-modal__hint";
-    hint.textContent = "For toggles like play/pause · j/k to move · Enter to select · Esc to cancel";
-
     showListPicker(
       modal,
       ["Yes, add alternate element", "No, single element"],
@@ -196,8 +198,11 @@ function openElementModal(targetEl, bindingType, pageUrl, { onNeedsAlt } = {}) {
       cancel,
     );
 
-    modal.appendChild(hint);
-
+    modal.appendChild(
+      makeHint(
+        "For toggles like play/pause · j/k to move · Enter to select · Esc to cancel",
+      ),
+    );
     document.body.appendChild(modal);
   });
 }
@@ -218,6 +223,7 @@ function startNonElementFlow(modal, title, type, finish) {
 }
 
 function showEmulateFlow(modal, title, finish) {
+  title.textContent = "Emulate key";
   const state = {};
 
   function cancel() {
@@ -257,6 +263,7 @@ function showEmulateFlow(modal, title, finish) {
 }
 
 function showHintFlow(modal, title, finish) {
+  title.textContent = "Hint";
   const state = {};
 
   function cancel() {
@@ -293,10 +300,6 @@ function showHintFlow(modal, title, finish) {
 
 function showActionFlow(modal, title, finish) {
   title.textContent = "Pick an action";
-
-  const hint = document.createElement("div");
-  hint.className = "bindy-modal__hint";
-  hint.textContent = "j/k to move · Enter to select · Esc to cancel";
 
   const state = {};
 
@@ -335,18 +338,14 @@ function showActionFlow(modal, title, finish) {
     );
   }
 
-  function onActionSelect(i) {
-    pickAction(BUILTIN_ACTIONS[i]);
-  }
-
   showListPicker(
     modal,
     BUILTIN_ACTIONS.map((t) => t.label),
-    onActionSelect,
+    (i) => pickAction(BUILTIN_ACTIONS[i]),
     cancel,
   );
 
-  modal.appendChild(hint);
+  modal.appendChild(makeHint("j/k to move · Enter to select · Esc to cancel"));
 }
 
 // --- Edit/Remove flow ---
@@ -393,14 +392,10 @@ function openEditModal(pageBindings, defaults, originalDefaults) {
       title.className = "bindy-modal__title";
       title.textContent = "No bindings on this page";
       modal.appendChild(title);
-
-      const hint = document.createElement("div");
-      hint.className = "bindy-modal__hint";
-      hint.textContent = "Esc to close";
-      modal.appendChild(hint);
+      modal.appendChild(makeHint("Esc to close"));
 
       function handleEscapeKey(ev) {
-        if (ev.key === "Escape") {
+        if (isPlainEscape(ev)) {
           ev.preventDefault();
           ev.stopPropagation();
           document.removeEventListener("keydown", handleEscapeKey, true);
@@ -422,10 +417,6 @@ function openEditModal(pageBindings, defaults, originalDefaults) {
     title.textContent = "Edit binding";
     modal.appendChild(title);
 
-    const hint = document.createElement("div");
-    hint.className = "bindy-modal__hint";
-    hint.textContent = "j/k to move · Enter to select · Esc to cancel";
-
     const labels = allItems.map((item) => {
       const b = item.binding;
       const suffix = item.isDefault ? " (default)" : "";
@@ -435,7 +426,13 @@ function openEditModal(pageBindings, defaults, originalDefaults) {
     function onSelect(i) {
       const item = allItems[i];
       if (item.isDefault) {
-        showDefaultEditActions(modal, title, item.binding, originalDefaults, finish);
+        showDefaultEditActions(
+          modal,
+          title,
+          item.binding,
+          originalDefaults,
+          finish,
+        );
       } else {
         showEditActions(modal, title, item.binding, finish);
       }
@@ -443,7 +440,9 @@ function openEditModal(pageBindings, defaults, originalDefaults) {
 
     showListPicker(modal, labels, onSelect, cancel);
 
-    modal.appendChild(hint);
+    modal.appendChild(
+      makeHint("j/k to move · Enter to select · Esc to cancel"),
+    );
     document.body.appendChild(modal);
   });
 }
@@ -452,10 +451,6 @@ function showEditActions(modal, title, binding, finish) {
   clearModalContent(modal);
   title = modal.querySelector(".bindy-modal__title");
   if (title) title.textContent = `[${binding.hotkey}] ${binding.name}`;
-
-  const hint = document.createElement("div");
-  hint.className = "bindy-modal__hint";
-  hint.textContent = "j/k to move · Enter to select · Esc to cancel";
 
   const oldScope = binding.scope;
   const oldHotkey = binding.hotkey;
@@ -505,10 +500,6 @@ function showEditActions(modal, title, binding, finish) {
     const t = modal.querySelector(".bindy-modal__title");
     if (t) t.textContent = "Change type";
 
-    const hint2 = document.createElement("div");
-    hint2.className = "bindy-modal__hint";
-    hint2.textContent = "j/k to move · Enter to select · Esc to cancel";
-
     function onTypeSelect(ti) {
       const picked = BINDING_TYPES[ti];
       const updated = { ...binding, type: picked.type };
@@ -527,7 +518,6 @@ function showEditActions(modal, title, binding, finish) {
           updateBinding(oldScope, oldHotkey, oldScope, updated);
           finish({ action: "updated" });
         }
-
         showEmulateKeyStep(modal, binding.name, onEmulateKey, cancel);
         return;
       }
@@ -542,8 +532,9 @@ function showEditActions(modal, title, binding, finish) {
       onTypeSelect,
       cancel,
     );
-
-    modal.appendChild(hint2);
+    modal.appendChild(
+      makeHint("j/k to move · Enter to select · Esc to cancel"),
+    );
   }
 
   function handleEditScope() {
@@ -568,34 +559,40 @@ function showEditActions(modal, title, binding, finish) {
     showModeStep(modal, onNewMode, cancel);
   }
 
-  function onActionSelect(i) {
-    const action = EDIT_ACTIONS[i].value;
-
-    if (action === "delete") return handleDelete();
-    if (action === "editName") return handleEditName();
-    if (action === "editHotkey") return handleEditHotkey();
-    if (action === "editType") return handleEditType();
-    if (action === "editScope") return handleEditScope();
-    if (action === "editMode") return handleEditMode();
-  }
+  const handlers = {
+    delete: handleDelete,
+    editName: handleEditName,
+    editHotkey: handleEditHotkey,
+    editType: handleEditType,
+    editScope: handleEditScope,
+    editMode: handleEditMode,
+  };
 
   showListPicker(
     modal,
     EDIT_ACTIONS.map((t) => t.label),
-    onActionSelect,
+    (i) => handlers[EDIT_ACTIONS[i].value]?.(),
     cancel,
   );
 
-  modal.appendChild(hint);
+  modal.appendChild(makeHint("j/k to move · Enter to select · Esc to cancel"));
 }
 
-function showDefaultEditActions(modal, title, binding, originalDefaults, finish) {
+function showDefaultEditActions(
+  modal,
+  title,
+  binding,
+  originalDefaults,
+  finish,
+) {
   clearModalContent(modal);
   title = modal.querySelector(".bindy-modal__title");
-  if (title) title.textContent = `[${binding.hotkey}] ${binding.name} (default)`;
+  if (title)
+    title.textContent = `[${binding.hotkey}] ${binding.name} (default)`;
 
   const original = originalDefaults.find((b) => b.type === binding.type);
-  const isOverridden = original &&
+  const isOverridden =
+    original &&
     (original.hotkey !== binding.hotkey || binding.mode !== original.mode);
 
   const actions = [
@@ -605,10 +602,6 @@ function showDefaultEditActions(modal, title, binding, originalDefaults, finish)
   if (isOverridden) {
     actions.push({ label: `Reset to [${original.hotkey}]`, value: "reset" });
   }
-
-  const hint = document.createElement("div");
-  hint.className = "bindy-modal__hint";
-  hint.textContent = "j/k to move · Enter to select · Esc to cancel";
 
   function cancel() {
     finish(null);
@@ -644,21 +637,20 @@ function showDefaultEditActions(modal, title, binding, originalDefaults, finish)
     finish({ action: "reset" });
   }
 
-  function onActionSelect(i) {
-    const action = actions[i].value;
-    if (action === "editHotkey") return handleEditHotkey();
-    if (action === "editMode") return handleEditMode();
-    if (action === "reset") return handleReset();
-  }
+  const handlers = {
+    editHotkey: handleEditHotkey,
+    editMode: handleEditMode,
+    reset: handleReset,
+  };
 
   showListPicker(
     modal,
     actions.map((a) => a.label),
-    onActionSelect,
+    (i) => handlers[actions[i].value]?.(),
     cancel,
   );
 
-  modal.appendChild(hint);
+  modal.appendChild(makeHint("j/k to move · Enter to select · Esc to cancel"));
 }
 
 // --- Scope & Mode steps ---
@@ -674,10 +666,6 @@ function showScopeStep(modal, pageUrl, onScope, onCancel) {
 
   const siteScope = window.location.host + "/";
 
-  const hint = document.createElement("div");
-  hint.className = "bindy-modal__hint";
-  hint.textContent = "j/k to move · Enter to select · Esc to cancel";
-
   function onScopeSelect(i) {
     const picked = SCOPE_OPTIONS[i].value;
     if (picked === "page") {
@@ -691,18 +679,14 @@ function showScopeStep(modal, pageUrl, onScope, onCancel) {
     }
   }
 
-  function cancelScope() {
-    onCancel(null);
-  }
-
   showListPicker(
     modal,
     SCOPE_OPTIONS.map((t) => t.label),
     onScopeSelect,
-    cancelScope,
+    () => onCancel(null),
   );
 
-  modal.appendChild(hint);
+  modal.appendChild(makeHint("j/k to move · Enter to select · Esc to cancel"));
 }
 
 function showCustomScopeInput(modal, onScope, onCancel) {
@@ -715,16 +699,14 @@ function showCustomScopeInput(modal, onScope, onCancel) {
   input.type = "text";
   input.placeholder = "e.g. youtube.com/watch";
 
-  const hint = document.createElement("div");
-  hint.className = "bindy-modal__hint";
-  hint.textContent = "Enter to confirm · Esc to cancel";
+  const hint = makeHint("Enter to confirm · Esc to cancel");
 
   modal.appendChild(input);
   modal.appendChild(hint);
   requestAnimationFrame(() => input.focus());
 
   function handleKeydown(ev) {
-    if (ev.key === "Escape") {
+    if (isPlainEscape(ev)) {
       ev.preventDefault();
       onCancel(null);
       return;
@@ -747,26 +729,14 @@ function showModeStep(modal, onMode, onCancel) {
   const title = modal.querySelector(".bindy-modal__title");
   if (title) title.textContent = "Mode";
 
-  const hint = document.createElement("div");
-  hint.className = "bindy-modal__hint";
-  hint.textContent = "j/k to move · Enter to select · Esc to cancel";
-
-  function onSelect(i) {
-    onMode(MODE_OPTIONS[i].value);
-  }
-
-  function cancelMode() {
-    onCancel(null);
-  }
-
   showListPicker(
     modal,
     MODE_OPTIONS.map((t) => t.label),
-    onSelect,
-    cancelMode,
+    (i) => onMode(MODE_OPTIONS[i].value),
+    () => onCancel(null),
   );
 
-  modal.appendChild(hint);
+  modal.appendChild(makeHint("j/k to move · Enter to select · Esc to cancel"));
 }
 
 function openListModal(titleText, labels, onSelect) {
@@ -787,16 +757,19 @@ function openListModal(titleText, labels, onSelect) {
     title.textContent = titleText;
     modal.appendChild(title);
 
-    const hint = document.createElement("div");
-    hint.className = "bindy-modal__hint";
-    hint.textContent = "j/k to move · Enter to select · Esc to cancel";
+    showListPicker(
+      modal,
+      labels,
+      (i) => {
+        const result = onSelect(i);
+        finish(result);
+      },
+      () => finish(null),
+    );
 
-    showListPicker(modal, labels, (i) => {
-      const result = onSelect(i);
-      finish(result);
-    }, () => finish(null));
-
-    modal.appendChild(hint);
+    modal.appendChild(
+      makeHint("j/k to move · Enter to select · Esc to cancel"),
+    );
     document.body.appendChild(modal);
   });
 }
@@ -856,13 +829,10 @@ function showListPicker(modal, labels, onSelect, onCancel) {
     const item = document.createElement("div");
     item.className = "bindy-modal__list-item";
     item.textContent = label;
-
-    function handleClick() {
+    item.addEventListener("click", () => {
       cleanup();
       onSelect(i);
-    }
-
-    item.addEventListener("click", handleClick);
+    });
     list.appendChild(item);
     return item;
   }
@@ -882,7 +852,7 @@ function showListPicker(modal, labels, onSelect, onCancel) {
     ev.stopPropagation();
     const key = ev.key;
 
-    if (key === "Escape") {
+    if (isPlainEscape(ev)) {
       ev.preventDefault();
       cleanup();
       onCancel();
@@ -910,7 +880,10 @@ function showListPicker(modal, labels, onSelect, onCancel) {
     list.remove();
   }
 
-  activeCancel = () => { cleanup(); onCancel(); };
+  activeCancel = () => {
+    cleanup();
+    onCancel();
+  };
   document.addEventListener("keydown", handleKeydown, true);
 }
 
@@ -932,9 +905,7 @@ function showNameStep(modal, onName, onCancel) {
   nameInput.type = "text";
   nameInput.placeholder = "e.g. Open menu";
 
-  const hint = document.createElement("div");
-  hint.className = "bindy-modal__hint";
-  hint.textContent = "Enter to continue · Esc to cancel";
+  const hint = makeHint("Enter to continue · Esc to cancel");
 
   modal.appendChild(nameInput);
   modal.appendChild(hint);
@@ -943,7 +914,7 @@ function showNameStep(modal, onName, onCancel) {
   });
 
   function handleKeydown(ev) {
-    if (ev.key === "Escape") {
+    if (isPlainEscape(ev)) {
       ev.preventDefault();
       onCancel(null);
       return;
@@ -965,9 +936,7 @@ function showKeyCaptureStep(modal, titleText, hintText, onKey, onCancel) {
   const title = modal.querySelector(".bindy-modal__title");
   if (title) title.textContent = titleText;
 
-  const hint = document.createElement("div");
-  hint.className = "bindy-modal__hint";
-  hint.textContent = hintText;
+  const hint = makeHint(hintText);
   modal.appendChild(hint);
 
   function cleanup() {
@@ -978,7 +947,7 @@ function showKeyCaptureStep(modal, titleText, hintText, onKey, onCancel) {
   function handleKeydown(ev) {
     ev.preventDefault();
     ev.stopPropagation();
-    if (ev.key === "Escape") {
+    if (isPlainEscape(ev)) {
       cleanup();
       onCancel(null);
       return;
@@ -988,14 +957,29 @@ function showKeyCaptureStep(modal, titleText, hintText, onKey, onCancel) {
     onKey(formatHotkey(ev));
   }
 
-  activeCancel = () => { cleanup(); onCancel(null); };
+  activeCancel = () => {
+    cleanup();
+    onCancel(null);
+  };
   document.addEventListener("keydown", handleKeydown, true);
 }
 
 function showHotkeyStep(modal, label, onHotkey, onCancel) {
-  showKeyCaptureStep(modal, label, "Press a key · Esc to cancel", onHotkey, onCancel);
+  showKeyCaptureStep(
+    modal,
+    label,
+    "Press a key · Esc to cancel",
+    onHotkey,
+    onCancel,
+  );
 }
 
 function showEmulateKeyStep(modal, name, onKey, onCancel) {
-  showKeyCaptureStep(modal, `Key to emulate for "${name}"`, "Press the key to emulate · Esc to cancel", onKey, onCancel);
+  showKeyCaptureStep(
+    modal,
+    `Key to emulate for "${name}"`,
+    "Press the key to emulate · Esc to cancel",
+    onKey,
+    onCancel,
+  );
 }
