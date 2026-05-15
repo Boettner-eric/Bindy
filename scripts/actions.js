@@ -57,6 +57,12 @@ function executeBinding(binding, ctx) {
       document.dispatchEvent(event);
       return true;
     }
+    case "autoClick": {
+      const updated = { ...binding, autoActive: !binding.autoActive };
+      delete updated.scope;
+      updateBinding(binding.scope, binding.hotkey, binding.scope, updated);
+      return true;
+    }
     case "hint":
       // display but do nothing (don't skip default)
       return false;
@@ -136,8 +142,17 @@ function isVisible(el) {
 }
 
 function safeQuery(selector) {
+  return shadowQuery(selector, document);
+}
+
+// Resolve a selector that may cross shadow roots via " >>> " segments.
+function shadowQuery(selector, root) {
   try {
-    return document.querySelector(selector);
+    const sep = selector.indexOf(" >>> ");
+    if (sep === -1) return root.querySelector(selector);
+    const host = root.querySelector(selector.slice(0, sep));
+    if (!host || !host.shadowRoot) return null;
+    return shadowQuery(selector.slice(sep + 5), host.shadowRoot);
   } catch (_) {
     return null;
   }

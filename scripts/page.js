@@ -71,6 +71,8 @@ function initTopFrame() {
   let effectiveDefaults = [...DEFAULT_BINDINGS];
   let barWasHidden = false;
   let previousFocus = null;
+  let autoObserver = null;
+  const autoPresence = new Map();
   function getPagePath() {
     return `${window.location.host}${window.location.pathname}`;
   }
@@ -89,11 +91,81 @@ function initTopFrame() {
   const directions = createDirections();
   const focusTrap = createFocusTrap();
 
+  function syncAutoObserver() {
+    const active = pageBindings.filter((b) => b.type === "autoClick" && b.autoActive);
+
+    if (autoObserver) {
+      autoObserver.disconnect();
+      autoObserver = null;
+    }
+
+    for (const key of autoPresence.keys()) {
+      if (!active.some((b) => b.selector === key)) autoPresence.delete(key);
+    }
+
+    if (active.length === 0) return;
+
+    const observerOpts = { childList: true, subtree: true, attributes: true };
+    const observedRoots = new Set();
+
+    function observeRoot(root) {
+      if (observedRoots.has(root)) return;
+      observedRoots.add(root);
+      autoObserver.observe(root, observerOpts);
+    }
+
+    function getDocForBinding(b) {
+      if (!b.iframe) return document;
+      const frame = safeQuery(b.iframe);
+      return frame?.contentDocument || null;
+    }
+
+    function queryInDoc(selector, doc) {
+      if (!doc) return null;
+      return shadowQuery(selector, doc);
+    }
+
+    function collectShadowRoots() {
+      for (const b of active) {
+        const parts = b.selector.split(" >>> ");
+        if (parts.length <= 1) continue;
+        const doc = getDocForBinding(b);
+        if (!doc) continue;
+        let root = doc;
+        for (let i = 0; i < parts.length - 1; i++) {
+          const host = root.querySelector(parts[i]);
+          if (!host?.shadowRoot) break;
+          observeRoot(host.shadowRoot);
+          root = host.shadowRoot;
+        }
+      }
+    }
+
+    function checkAll() {
+      collectShadowRoots();
+      for (const b of active) {
+        const wasPresent = autoPresence.get(b.selector) ?? false;
+        const el = queryInDoc(b.selector, getDocForBinding(b));
+        if (!el) {
+          autoPresence.set(b.selector, false);
+        } else if (!wasPresent && isVisible(el)) {
+          activateElement(el);
+          autoPresence.set(b.selector, true);
+        }
+      }
+    }
+
+    autoObserver = new MutationObserver(checkAll);
+    observeRoot(document.body);
+    checkAll();
+  }
+
   function applyBindings(allBindings) {
     const split = splitBindings(allBindings);
     effectiveDefaults = split.defaults;
     pageBindings = split.userBindings;
     renderBar(bar, effectiveDefaults, pageBindings);
+    syncAutoObserver();
   }
 
   async function loadInitialState() {
@@ -172,7 +244,7 @@ function initTopFrame() {
 
   async function handleClick(e) {
     if (!bindingMode || !awaitingClick) return;
-    const target = findInteractiveAncestor(e.target);
+    const target = findInteractiveAncestor(e.composedPath()[0] ?? e.target);
     if (!target) return;
     e.preventDefault();
     e.stopPropagation();

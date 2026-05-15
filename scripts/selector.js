@@ -21,19 +21,19 @@ const INTERACTIVE_ROLES = new Set([
   "option",
 ]);
 
-function uniqueAttrSelector(el) {
+function uniqueAttrSelector(el, root = document) {
   for (const attr of STABLE_ATTRS) {
     const val = el.getAttribute(attr);
     if (!val) continue;
     const sel = `[${attr}="${CSS.escape(val)}"]`;
-    if (document.querySelectorAll(sel).length === 1) return sel;
+    if (root.querySelectorAll(sel).length === 1) return sel;
   }
   return null;
 }
 
-function localSelector(el) {
+function localSelector(el, root = document) {
   if (el.id) return `#${CSS.escape(el.id)}`;
-  const attrSel = uniqueAttrSelector(el);
+  const attrSel = uniqueAttrSelector(el, root);
   if (attrSel) return attrSel;
   let part = el.tagName.toLowerCase();
   const parent = el.parentElement;
@@ -48,7 +48,34 @@ function localSelector(el) {
   return part;
 }
 
+// Build a selector for el within a ShadowRoot boundary.
+function getSelectorInRoot(el, root) {
+  if (el.id) return `#${CSS.escape(el.id)}`;
+  const attrSel = uniqueAttrSelector(el, root);
+  if (attrSel) return attrSel;
+
+  const parts = [];
+  let node = el;
+  while (node && node.nodeType === 1) {
+    parts.unshift(localSelector(node, root));
+    const candidate = parts.join(" > ");
+    if (root.querySelectorAll(candidate).length === 1) return candidate;
+    const parent = node.parentElement;
+    if (!parent || parent.getRootNode() !== root) break;
+    node = parent;
+  }
+  return parts.join(" > ");
+}
+
 function getSelector(el) {
+  // Shadow DOM: encode as "host-selector >>> inner-selector" (may be nested).
+  const root = el.getRootNode();
+  if (root instanceof ShadowRoot) {
+    const hostSelector = getSelector(root.host);
+    const innerSelector = getSelectorInRoot(el, root);
+    return `${hostSelector} >>> ${innerSelector}`;
+  }
+
   if (el.id) return `#${CSS.escape(el.id)}`;
   const attrSel = uniqueAttrSelector(el);
   if (attrSel) return attrSel;
@@ -88,7 +115,13 @@ function findInteractiveAncestor(el) {
   let node = el;
   while (node && node !== document.body) {
     if (isInteractive(node)) return node;
-    node = node.parentElement;
+    if (node.parentElement) {
+      node = node.parentElement;
+    } else {
+      // At the shadow root boundary — continue to the host element.
+      const nodeRoot = node.getRootNode();
+      node = nodeRoot instanceof ShadowRoot ? nodeRoot.host : null;
+    }
   }
   return null;
 }

@@ -130,6 +130,18 @@
 .bindy-bar:focus .bindy-chip--focused {
   color: var(--bindy-accent);
 }
+.bindy-chip--auto-on {
+  color: var(--bindy-accent) !important;
+}
+.bindy-chip--auto-off {
+  color: var(--bindy-muted) !important;
+}
+.bindy-bar:focus .bindy-chip--auto-on::after {
+  content: " (on)";
+}
+.bindy-bar:focus .bindy-chip--auto-off::after {
+  content: " (off)";
+}
 .bindy-chip-sep {
   display: none;
   margin-left: 8px;

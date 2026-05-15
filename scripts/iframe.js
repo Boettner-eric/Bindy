@@ -11,7 +11,7 @@ function initChildFrame() {
   }
 
   function handleBindClick(e) {
-    const target = findInteractiveAncestor(e.target);
+    const target = findInteractiveAncestor(e.composedPath()[0] ?? e.target);
     if (!target) return;
     e.preventDefault();
     e.stopPropagation();

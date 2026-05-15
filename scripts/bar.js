@@ -63,6 +63,7 @@ function makeChip(b) {
   if (b.isDefault) cls += " bindy-chip--default";
   if (b.mode === "focused") cls += " bindy-chip--focused";
   if (b.mode !== "pinned") cls += " bindy-chip--unpinned";
+  if (b.type === "autoClick") cls += b.autoActive ? " bindy-chip--auto-on" : " bindy-chip--auto-off";
   chip.className = cls;
   chip.textContent = b.name ? `[${b.hotkey}] ${b.name}` : `[${b.hotkey}]`;
   return chip;

@@ -17,6 +17,7 @@ A chrome extension to allow users to define custom keyboard shortcuts on any web
 - emulate an existing hotkey with another one
 - set a hotkey for common browser actions (scroll, theme, layout)
 - site-specific hotkeys scoped to the current page path
+- auto click an element when it appears (for skip buttons)
 
 ## Keyboard Shortcuts
 
@@ -48,3 +49,9 @@ Use **Pinned** for shortcuts you want visible at a glance. Use **Background** to
 - Emulation doesn't always work as we can only send synthetic keyboard events and some sites will ignore them. (Youtube). An easy work around is to use click element instead
 - Some iframes don't work properly
 - If a site changes a dom component it might break a shortcut (you can always edit it)
+
+## Roadmap
+
+- [x] auto (toggle on /off)
+- [ ] toggle default behavior (pass through)
+- [ ] web interface for settings

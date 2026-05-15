@@ -4,6 +4,7 @@ let preFocusEl = null;
 
 const BINDING_TYPES = [
   { type: "click", label: "Click element", needsElement: true },
+  { type: "autoClick", label: "Auto click", needsElement: true },
   { type: "emulate", label: "Emulate key", needsElement: false },
   { type: "hint", label: "Hint (display only)", needsElement: false },
   { type: "action", label: "Built-in action", needsElement: false },
@@ -506,7 +507,8 @@ function showEditActions(modal, title, binding, finish) {
       delete updated.scope;
       // Clear fields that don't apply to the new type
       if (picked.type !== "emulate") delete updated.emulateKey;
-      if (picked.type !== "click") delete updated.selector;
+      if (picked.type !== "click" && picked.type !== "autoClick") delete updated.selector;
+      if (picked.type !== "autoClick") delete updated.autoActive;
       if (picked.type !== "scroll") {
         delete updated.dy;
         delete updated.to;
