@@ -681,12 +681,13 @@ function showScopeStep(modal, pageUrl, onScope, onCancel) {
     }
   }
 
-  showListPicker(
-    modal,
-    SCOPE_OPTIONS.map((t) => t.label),
-    onScopeSelect,
-    () => onCancel(null),
-  );
+  const scopeValues = { page: pageUrl, site: siteScope, all: "/", custom: null };
+  const labels = SCOPE_OPTIONS.map((t) => {
+    const val = scopeValues[t.value];
+    return val !== null ? `${t.label} — ${val}` : t.label;
+  });
+
+  showListPicker(modal, labels, onScopeSelect, () => onCancel(null));
 
   modal.appendChild(makeHint("j/k to move · Enter to select · Esc to cancel"));
 }

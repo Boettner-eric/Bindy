@@ -107,9 +107,10 @@ function executeBinding(binding, ctx) {
 }
 
 function openSettingsPicker() {
-  openListModal("Settings", ["Theme", "Layout"], (i) => {
+  openListModal("Settings", ["Theme", "Layout", "Open settings page"], (i) => {
     if (i === 0) openThemePicker();
-    else openLayoutPicker();
+    else if (i === 1) openLayoutPicker();
+    else window.open(chrome.runtime.getURL("settings.html"));
   });
 }
 

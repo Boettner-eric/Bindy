@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Bindy Settings</title>
+  <style>
+    @font-face {
+      font-family: "Fira Code";
+      src: url("fonts/FiraCode-Regular.woff2") format("woff2");
+      font-weight: 400;
+    }
+
+    :root {
+      --bg: #2b2836;
+      --bg-deep: #1e1c26;
+      --text: #dce7fd;
+      --muted: #655e7f;
+      --accent: #bd93f9;
+      --accent-glow: rgba(189, 147, 249, 0.4);
+      --highlight: #3b3750;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Fira Code", monospace;
+      font-size: 13px;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Header */
+    header {
+      background: var(--bg-deep);
+      border-bottom: 1px solid var(--highlight);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .header-logo {
+      color: var(--accent);
+      font-size: 15px;
+      font-weight: 400;
+      letter-spacing: 0.05em;
+    }
+
+    .header-logo span {
+      color: var(--muted);
+    }
+
+    /* Layout */
+    main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 220px;
+      background: var(--bg-deep);
+      border-right: 1px solid var(--highlight);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+
+    .sidebar-section {
+      padding: 16px 12px 8px;
+    }
+
+    .sidebar-heading {
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .scope-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      color: var(--muted);
+      transition: background 0.1s, color 0.1s;
+    }
+
+    .scope-item:hover { background: var(--highlight); color: var(--text); }
+    .scope-item--active { background: var(--highlight); color: var(--accent); }
+
+    .scope-label {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .scope-badge {
+      font-size: 11px;
+      color: var(--muted);
+      margin-left: 6px;
+      flex-shrink: 0;
+    }
+
+    .scope-empty {
+      padding: 6px 8px;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .sidebar-divider {
+      border: none;
+      border-top: 1px solid var(--highlight);
+      margin: 8px 0;
+    }
+
+    /* Appearance controls */
+    .appearance-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 0;
+      gap: 8px;
+    }
+
+    .appearance-label {
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    select {
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--highlight);
+      border-radius: 3px;
+      padding: 3px 6px;
+      font-family: "Fira Code", monospace;
+      font-size: 12px;
+      cursor: pointer;
+      flex: 1;
+      min-width: 0;
+    }
+
+    select:focus { outline: 1px solid var(--accent); }
+
+    /* Content area */
+    .content {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* Bindings panel */
+    .bindings-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .bindings-header {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--highlight);
+      flex-shrink: 0;
+    }
+
+    .bindings-scope-title {
+      font-size: 13px;
+      color: var(--accent);
+    }
+
+    .bindings-scope-hint {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .bindings-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+
+    .bindings-placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    /* Bindings table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead th {
+      text-align: left;
+      padding: 6px 12px;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--highlight);
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--highlight);
+      cursor: pointer;
+      transition: background 0.08s;
+    }
+
+    tbody tr:hover { background: var(--highlight); }
+    tbody tr.binding-row--active { background: var(--highlight); outline: 1px solid var(--accent); outline-offset: -1px; }
+    tbody tr:last-child { border-bottom: none; }
+
+    td {
+      padding: 8px 12px;
+      vertical-align: middle;
+    }
+
+    .col-hotkey { width: 120px; }
+    .col-name { }
+    .col-type { width: 90px; color: var(--muted); }
+    .col-mode { width: 90px; color: var(--muted); }
+    .col-scope { width: 160px; color: var(--muted); }
+    .col-del { width: 36px; }
+
+    .hotkey-chip {
+      display: inline-block;
+      background: var(--bg-deep);
+      border: 1px solid var(--highlight);
+      border-radius: 3px;
+      padding: 2px 7px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .empty-row td {
+      padding: 20px;
+      color: var(--muted);
+      text-align: center;
+      cursor: default;
+    }
+
+    .del-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 0 4px;
+      border-radius: 3px;
+      line-height: 1;
+      transition: color 0.1s, background 0.1s;
+      font-family: monospace;
+    }
+
+    .del-btn:hover { color: #ff5555; background: rgba(255,85,85,0.1); }
+
+    /* Edit panel */
+    .edit-panel {
+      width: 280px;
+      background: var(--bg-deep);
+      border-left: 1px solid var(--highlight);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+
+    .edit-panel-header {
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid var(--highlight);
+    }
+
+    .edit-panel-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+    }
+
+    .edit-panel-body {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .field-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    .field input[type="text"],
+    .field select {
+      width: 100%;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--highlight);
+      border-radius: 3px;
+      padding: 5px 8px;
+      font-family: "Fira Code", monospace;
+      font-size: 12px;
+    }
+
+    .field input[type="text"]:focus,
+    .field select:focus {
+      outline: 1px solid var(--accent);
+      border-color: var(--accent);
+    }
+
+    .hotkey-capture {
+      background: var(--bg);
+      border: 1px solid var(--highlight);
+      border-radius: 3px;
+      padding: 5px 8px;
+      font-size: 12px;
+      cursor: pointer;
+      color: var(--text);
+      transition: border-color 0.1s;
+      user-select: none;
+    }
+
+    .hotkey-capture:hover { border-color: var(--accent); }
+    .hotkey-capture--capturing { border-color: var(--accent); color: var(--accent); }
+
+    .edit-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .btn {
+      padding: 6px 12px;
+      border-radius: 3px;
+      border: 1px solid var(--highlight);
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Fira Code", monospace;
+      font-size: 12px;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.1s, border-color 0.1s;
+    }
+
+    .btn:hover { background: var(--highlight); }
+
+    .btn--primary {
+      background: var(--accent);
+      color: var(--bg-deep);
+      border-color: var(--accent);
+    }
+
+    .btn--primary:hover { opacity: 0.85; }
+
+    .btn--danger {
+      border-color: rgba(255,85,85,0.4);
+      color: #ff5555;
+    }
+
+    .btn--danger:hover { background: rgba(255,85,85,0.1); border-color: #ff5555; }
+
+    .field-hint {
+      font-size: 10px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-logo">[<span>b</span>] bindy <span>/ settings</span></div>
+  </header>
+  <main>
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Pages</div>
+        <div id="scope-list"></div>
+      </div>
+      <hr class="sidebar-divider">
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Appearance</div>
+        <div class="appearance-row">
+          <span class="appearance-label">Theme</span>
+          <select id="theme-select">
+            <option>Skeletor</option>
+            <option>Dracula</option>
+            <option>Nord</option>
+            <option>Monokai</option>
+            <option>Solarized</option>
+            <option>Rosé Pine</option>
+            <option>Arc</option>
+          </select>
+        </div>
+        <div class="appearance-row">
+          <span class="appearance-label">Layout</span>
+          <select id="layout-select">
+            <option value="bar">Bottom bar</option>
+            <option value="sidebar">Sidebar</option>
+          </select>
+        </div>
+      </div>
+    </aside>
+
+    <div class="content">
+      <div class="bindings-panel">
+        <div class="bindings-header">
+          <div class="bindings-scope-title" id="scope-title">Select a page</div>
+          <div class="bindings-scope-hint" id="scope-hint"></div>
+        </div>
+        <div class="bindings-body">
+          <div class="bindings-placeholder" id="bindings-placeholder">No scope selected</div>
+          <table id="bindings-table" style="display:none">
+            <thead>
+              <tr>
+                <th class="col-hotkey">Hotkey</th>
+                <th class="col-name">Name</th>
+                <th class="col-type">Type</th>
+                <th class="col-mode">Mode</th>
+                <th class="col-scope">Scope</th>
+                <th class="col-del"></th>
+              </tr>
+            </thead>
+            <tbody id="bindings-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="edit-panel" id="edit-panel" style="display:none">
+        <div class="edit-panel-header">
+          <div class="edit-panel-title">Edit binding</div>
+        </div>
+        <div class="edit-panel-body" id="edit-panel-body"></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="scripts/settings.js"></script>
+</body>
+</html>

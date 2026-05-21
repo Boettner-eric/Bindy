@@ -33,10 +33,11 @@
     "256": "/icons/256x256.png",
     "512": "/icons/512x512.png"
   },
+  "options_page": "settings.html",
   "permissions": ["storage"],
   "web_accessible_resources": [
     {
-      "resources": ["fonts/FiraCode-Regular.woff2"],
+      "resources": ["fonts/FiraCode-Regular.woff2", "settings.html"],
       "matches": ["<all_urls>"]
     }
   ]
