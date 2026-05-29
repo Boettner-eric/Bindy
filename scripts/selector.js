@@ -76,7 +76,7 @@ function getSelector(el) {
     return `${hostSelector} >>> ${innerSelector}`;
   }
 
-  if (el.id) return `#${CSS.escape(el.id)}`;
+  if (el.id && document.querySelector(`#${CSS.escape(el.id)}`) === el) return `#${CSS.escape(el.id)}`;
   const attrSel = uniqueAttrSelector(el);
   if (attrSel) return attrSel;
 
