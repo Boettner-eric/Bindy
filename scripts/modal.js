@@ -4,6 +4,7 @@ let preFocusEl = null;
 
 const BINDING_TYPES = [
   { type: "click", label: "Click element", needsElement: true },
+  { type: "toggle", label: "Toggle element", needsElement: true },
   { type: "autoClick", label: "Auto click", needsElement: true },
   { type: "emulate", label: "Emulate key", needsElement: false },
   { type: "hint", label: "Hint (display only)", needsElement: false },
@@ -156,23 +157,6 @@ function openElementModal(targetEl, bindingType, pageUrl, { onNeedsAlt } = {}) {
       showHotkeyStep(modal, `Hotkey for "${name}"`, onHotkey, cancel);
     }
 
-    function onAltPick(i) {
-      if (i === 1) {
-        showNameStep(modal, onName, cancel);
-        return;
-      }
-      // Click the element to toggle its state
-      if (isDescriptor) {
-        dispatchToIframe(targetEl.iframeSelector, targetEl.selector, null);
-      } else {
-        targetEl.click();
-      }
-      // Hide modal + overlay while user picks alternate element
-      modal.remove();
-      if (activeOverlay) activeOverlay.remove();
-      if (onNeedsAlt) onNeedsAlt(onAltElement);
-    }
-
     function onAltElement(altEl) {
       const isIframeAlt = !(altEl instanceof Element);
       state.selectorAlt = isIframeAlt ? altEl.selector : getSelector(altEl);
@@ -187,24 +171,23 @@ function openElementModal(targetEl, bindingType, pageUrl, { onNeedsAlt } = {}) {
       showNameStep(modal, onName, cancel);
     }
 
-    const title = document.createElement("div");
-    title.className = "bindy-modal__title";
-    title.textContent = "Add alternate element?";
-    modal.appendChild(title);
-
-    showListPicker(
-      modal,
-      ["Yes, add alternate element", "No, single element"],
-      onAltPick,
-      cancel,
-    );
-
-    modal.appendChild(
-      makeHint(
-        "For toggles like play/pause · j/k to move · Enter to select · Esc to cancel",
-      ),
-    );
-    document.body.appendChild(modal);
+    if (bindingType === "toggle") {
+      // Click element A to reveal element B, then wait for user to pick it
+      if (isDescriptor) {
+        dispatchToIframe(targetEl.iframeSelector, targetEl.selector, null);
+      } else {
+        targetEl.click();
+      }
+      if (activeOverlay) activeOverlay.remove();
+      if (onNeedsAlt) onNeedsAlt(onAltElement);
+    } else {
+      // click / autoClick — no alt element, go straight to name
+      const title = document.createElement("div");
+      title.className = "bindy-modal__title";
+      modal.appendChild(title);
+      showNameStep(modal, onName, cancel);
+      document.body.appendChild(modal);
+    }
   });
 }
 
@@ -507,7 +490,7 @@ function showEditActions(modal, title, binding, finish) {
       delete updated.scope;
       // Clear fields that don't apply to the new type
       if (picked.type !== "emulate") delete updated.emulateKey;
-      if (picked.type !== "click" && picked.type !== "autoClick") delete updated.selector;
+      if (picked.type !== "click" && picked.type !== "autoClick" && picked.type !== "toggle") delete updated.selector;
       if (picked.type !== "autoClick") delete updated.autoActive;
       if (picked.type !== "scroll") {
         delete updated.dy;

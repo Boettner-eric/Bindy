@@ -1,6 +1,7 @@
 function executeBinding(binding, ctx) {
   const type = binding.type || "click";
   switch (type) {
+    case "toggle":
     case "click": {
       const primaryIframe = binding.iframe || null;
       const altIframe =
