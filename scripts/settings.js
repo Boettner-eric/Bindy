@@ -29,6 +29,16 @@ function bindingName(b) {
 }
 const MODE_OPTIONS = ["pinned", "background", "focused"];
 
+const BUILTIN_SCOPE = "__builtin__";
+
+const DEFAULT_BINDINGS = [
+  { hotkey: "ctrl+b", type: "toggleBindingMode", name: "bind", builtin: true, mode: "pinned" },
+  { hotkey: "ctrl+e", type: "editBinding", name: "edit", builtin: true, mode: "pinned" },
+  { hotkey: "ctrl+f", type: "focusBar", name: "focus bar", builtin: true, mode: "pinned" },
+  { hotkey: "ctrl+h", type: "toggleBarHidden", name: "hide bar", builtin: true, mode: "pinned" },
+  { hotkey: "ctrl+s", type: "openSettings", name: "settings", builtin: true, mode: "pinned" },
+];
+
 function resolveTheme(name) {
   return THEMES_DATA.find(t => t.name === name) || null;
 }
@@ -84,7 +94,7 @@ const state = {
 
 // --- Init ---
 async function init() {
-  const data = await storageGet({ bindings: {}, theme: "Skeletor", layout: "bar" });
+  const data = await storageGet({ bindings: {}, theme: "Skeletor", layout: "sidebar" });
   state.bindings = data.bindings || {};
 
   applyTheme(data.theme);
@@ -106,9 +116,12 @@ async function init() {
       state.bindings = changes.bindings.newValue || {};
       renderScopeList();
       if (state.selectedScope !== null) {
-        if (!state.bindings[state.selectedScope]) {
-          const remaining = Object.keys(state.bindings);
-          state.selectedScope = remaining[0] || null;
+        if (state.selectedScope !== BUILTIN_SCOPE) {
+          const hasNonBuiltin = (state.bindings[state.selectedScope] || []).some(b => !b.builtin);
+          if (!hasNonBuiltin) {
+            state.selectedScope = sortedScopes().find(s => s !== BUILTIN_SCOPE) || BUILTIN_SCOPE;
+            closeEditPanel();
+          }
         }
         renderBindings();
       }
@@ -135,14 +148,30 @@ async function init() {
 
 function autoSelectScope() {
   const scopes = sortedScopes();
-  if (scopes.length) selectScope(scopes[0]);
+  const firstUser = scopes.find(s => s !== BUILTIN_SCOPE);
+  selectScope(firstUser || BUILTIN_SCOPE);
 }
 
 function sortedScopes() {
-  return Object.keys(state.bindings).sort((a, b) => {
-    if (a === "/") return -1;
-    if (b === "/") return 1;
-    return a.localeCompare(b);
+  const user = Object.keys(state.bindings)
+    .filter(scope => (state.bindings[scope] || []).some(b => !b.builtin))
+    .sort((a, b) => {
+      if (a === "/") return -1;
+      if (b === "/") return 1;
+      return a.localeCompare(b);
+    });
+  return [BUILTIN_SCOPE, ...user];
+}
+
+function effectiveDefaults() {
+  const overrides = {};
+  for (const b of state.bindings["/"] || []) {
+    if (b.builtin) overrides[b.type] = b;
+  }
+  return DEFAULT_BINDINGS.map(d => {
+    const o = overrides[d.type];
+    if (!o) return d;
+    return { ...d, ...o, hotkey: o.hotkey || d.hotkey };
   });
 }
 
@@ -152,16 +181,8 @@ function renderScopeList() {
   list.innerHTML = "";
   const scopes = sortedScopes();
 
-  if (!scopes.length) {
-    const el = document.createElement("div");
-    el.className = "scope-empty";
-    el.textContent = "No bindings yet";
-    list.appendChild(el);
-    return;
-  }
-
   for (const scope of scopes) {
-    const count = (state.bindings[scope] || []).length;
+    const count = scope === BUILTIN_SCOPE ? DEFAULT_BINDINGS.length : (state.bindings[scope] || []).filter(b => !b.builtin).length;
     const item = document.createElement("div");
     item.className = "scope-item" + (scope === state.selectedScope ? " scope-item--active" : "");
 
@@ -181,11 +202,13 @@ function renderScopeList() {
 }
 
 function scopeLabel(scope) {
+  if (scope === BUILTIN_SCOPE) return "Bindy Defaults";
   if (scope === "/") return "All pages";
   return scope;
 }
 
 function scopeHint(scope) {
+  if (scope === BUILTIN_SCOPE) return "Default keybinds — active on every page";
   if (scope === "/") return "Active on every page";
   if (scope.endsWith("/")) return `Active on all paths under ${scope}`;
   return `Active on pages starting with ${scope}`;
@@ -216,7 +239,10 @@ function renderBindings() {
     return;
   }
 
-  const bindings = state.bindings[scope] || [];
+  const isBuiltin = scope === BUILTIN_SCOPE;
+  const bindings = isBuiltin
+    ? effectiveDefaults()
+    : (state.bindings[scope] || []).filter(b => !b.builtin);
   titleEl.textContent = scopeLabel(scope);
   hintEl.textContent = scopeHint(scope);
 
@@ -236,9 +262,11 @@ function renderBindings() {
   for (const b of bindings) {
     const row = tbody.insertRow();
     row.className = "binding-row";
-    if (state.editingBinding && state.editingBinding.hotkey === b.hotkey && state.editingBinding.scope === scope) {
-      row.classList.add("binding-row--active");
-    }
+
+    const isEditing = isBuiltin
+      ? state.editingBinding?.type === b.type && state.editingBinding?.scope === BUILTIN_SCOPE
+      : state.editingBinding?.hotkey === b.hotkey && state.editingBinding?.scope === scope;
+    if (isEditing) row.classList.add("binding-row--active");
 
     const hotkeyTd = row.insertCell();
     hotkeyTd.className = "col-hotkey";
@@ -261,22 +289,26 @@ function renderBindings() {
 
     const scopeTd = row.insertCell();
     scopeTd.className = "col-scope";
-    scopeTd.textContent = b.scope || scope;
+    scopeTd.textContent = isBuiltin ? "all pages" : (b.scope || scope);
 
     const delTd = row.insertCell();
     delTd.className = "col-del";
-    const delBtn = document.createElement("button");
-    delBtn.className = "del-btn";
-    delBtn.textContent = "×";
-    delBtn.title = "Delete";
-    delBtn.addEventListener("click", async (e) => {
-      e.stopPropagation();
-      await deleteBinding(scope, b.hotkey);
-      if (state.editingBinding?.hotkey === b.hotkey) closeEditPanel();
-    });
-    delTd.appendChild(delBtn);
 
-    row.addEventListener("click", () => openEditPanel(b, scope));
+    if (isBuiltin) {
+      row.addEventListener("click", () => openEditPanel(b, BUILTIN_SCOPE));
+    } else {
+      const delBtn = document.createElement("button");
+      delBtn.className = "del-btn";
+      delBtn.textContent = "×";
+      delBtn.title = "Delete";
+      delBtn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        await deleteBinding(scope, b.hotkey);
+        if (state.editingBinding?.hotkey === b.hotkey) closeEditPanel();
+      });
+      delTd.appendChild(delBtn);
+      row.addEventListener("click", () => openEditPanel(b, scope));
+    }
   }
 }
 
@@ -290,22 +322,33 @@ function openEditPanel(binding, scope) {
   panel.style.display = "";
   body.innerHTML = "";
 
+  const isBuiltinScope = scope === BUILTIN_SCOPE;
+
+  async function save(patch) {
+    if (isBuiltinScope) {
+      await saveDefaultOverride(binding.type, patch);
+    } else {
+      await patchBinding(scope, binding.hotkey, patch);
+    }
+  }
+
   // Name field
   body.appendChild(makeField("Name", () => {
     const input = document.createElement("input");
     input.type = "text";
     input.value = bindingName(binding);
     input.addEventListener("change", async () => {
-      await patchBinding(scope, binding.hotkey, { name: input.value.trim() || binding.name });
+      await save({ name: input.value.trim() || binding.name });
     });
     return input;
   }));
 
   // Hotkey field
+  let currentHotkey = binding.hotkey;
   body.appendChild(makeField("Hotkey", () => {
     const capture = document.createElement("div");
     capture.className = "hotkey-capture";
-    capture.textContent = binding.hotkey;
+    capture.textContent = currentHotkey;
     capture.tabIndex = 0;
 
     let capturing = false;
@@ -321,7 +364,7 @@ function openEditPanel(binding, scope) {
         e.stopPropagation();
         if (isModifier(e.key)) return;
         if (e.key === "Escape") {
-          capture.textContent = binding.hotkey;
+          capture.textContent = currentHotkey;
           capture.classList.remove("hotkey-capture--capturing");
           capturing = false;
           document.removeEventListener("keydown", onKey, true);
@@ -331,9 +374,9 @@ function openEditPanel(binding, scope) {
         document.removeEventListener("keydown", onKey, true);
         capture.classList.remove("hotkey-capture--capturing");
         capturing = false;
+        currentHotkey = hotkey;
         capture.textContent = hotkey;
-        patchBinding(scope, binding.hotkey, { hotkey });
-        // update our local reference for further edits
+        save({ hotkey });
         binding = { ...binding, hotkey };
         state.editingBinding = { ...state.editingBinding, hotkey };
       }
@@ -346,19 +389,21 @@ function openEditPanel(binding, scope) {
     return capture;
   }, "Click to capture a new key"));
 
-  // Type field
-  body.appendChild(makeField("Type", () => {
-    const sel = document.createElement("select");
-    for (const t of BINDING_TYPES) {
-      const opt = document.createElement("option");
-      opt.value = t;
-      opt.textContent = t;
-      if (t === (binding.type || "click")) opt.selected = true;
-      sel.appendChild(opt);
-    }
-    sel.addEventListener("change", () => patchBinding(scope, binding.hotkey, { type: sel.value }));
-    return sel;
-  }));
+  // Type field — not shown for builtin scope (type is fixed)
+  if (!isBuiltinScope) {
+    body.appendChild(makeField("Type", () => {
+      const sel = document.createElement("select");
+      for (const t of BINDING_TYPES) {
+        const opt = document.createElement("option");
+        opt.value = t;
+        opt.textContent = t;
+        if (t === (binding.type || "click")) opt.selected = true;
+        sel.appendChild(opt);
+      }
+      sel.addEventListener("change", () => save({ type: sel.value }));
+      return sel;
+    }));
+  }
 
   // Mode field
   body.appendChild(makeField("Mode", () => {
@@ -370,36 +415,54 @@ function openEditPanel(binding, scope) {
       if (m === binding.mode) opt.selected = true;
       sel.appendChild(opt);
     }
-    sel.addEventListener("change", () => patchBinding(scope, binding.hotkey, { mode: sel.value }));
+    sel.addEventListener("change", () => save({ mode: sel.value }));
     return sel;
   }));
 
-  // Scope field
-  body.appendChild(makeField("Scope", () => {
-    const input = document.createElement("input");
-    input.type = "text";
-    input.value = binding.scope || scope;
-    input.addEventListener("change", async () => {
-      const newScope = input.value.trim();
-      if (!newScope || newScope === scope) return;
-      await moveBinding(scope, binding.hotkey, newScope);
-      state.editingBinding = { ...state.editingBinding, scope: newScope };
-      selectScope(newScope);
-    });
-    return input;
-  }, "URL prefix: host/path, host/, or /"));
+  // Scope field — not shown for builtin scope (always global)
+  if (!isBuiltinScope) {
+    body.appendChild(makeField("Scope", () => {
+      const input = document.createElement("input");
+      input.type = "text";
+      input.value = binding.scope || scope;
+      input.addEventListener("change", async () => {
+        const newScope = input.value.trim();
+        if (!newScope || newScope === scope) return;
+        await moveBinding(scope, binding.hotkey, newScope);
+        state.editingBinding = { ...state.editingBinding, scope: newScope };
+        selectScope(newScope);
+      });
+      return input;
+    }, "URL prefix: host/path, host/, or /"));
+  }
 
-  // Delete
+  // Action button
   const actions = document.createElement("div");
   actions.className = "edit-actions";
-  const delBtn = document.createElement("button");
-  delBtn.className = "btn btn--danger";
-  delBtn.textContent = "Delete binding";
-  delBtn.addEventListener("click", async () => {
-    await deleteBinding(scope, binding.hotkey);
-    closeEditPanel();
-  });
-  actions.appendChild(delBtn);
+
+  if (isBuiltinScope) {
+    const hasOverride = (state.bindings["/"] || []).some(b => b.builtin && b.type === binding.type);
+    if (hasOverride) {
+      const resetBtn = document.createElement("button");
+      resetBtn.className = "btn btn--danger";
+      resetBtn.textContent = "Reset to default";
+      resetBtn.addEventListener("click", async () => {
+        await resetDefaultOverride(binding.type);
+        closeEditPanel();
+      });
+      actions.appendChild(resetBtn);
+    }
+  } else {
+    const delBtn = document.createElement("button");
+    delBtn.className = "btn btn--danger";
+    delBtn.textContent = "Delete binding";
+    delBtn.addEventListener("click", async () => {
+      await deleteBinding(scope, binding.hotkey);
+      closeEditPanel();
+    });
+    actions.appendChild(delBtn);
+  }
+
   body.appendChild(actions);
 }
 
@@ -454,6 +517,26 @@ async function deleteBinding(scope, hotkey) {
   const { bindings } = await storageGet({ bindings: {} });
   bindings[scope] = (bindings[scope] || []).filter(b => b.hotkey !== hotkey);
   if (!bindings[scope].length) delete bindings[scope];
+  await storageSet({ bindings });
+}
+
+async function saveDefaultOverride(type, patch) {
+  const { bindings } = await storageGet({ bindings: {} });
+  const list = bindings["/"] || [];
+  const existing = list.find(b => b.builtin && b.type === type);
+  if (existing) {
+    Object.assign(existing, patch);
+  } else {
+    list.push({ type, builtin: true, ...patch });
+  }
+  bindings["/"] = list;
+  await storageSet({ bindings });
+}
+
+async function resetDefaultOverride(type) {
+  const { bindings } = await storageGet({ bindings: {} });
+  bindings["/"] = (bindings["/"] || []).filter(b => !(b.builtin && b.type === type));
+  if (!bindings["/"].length) delete bindings["/"];
   await storageSet({ bindings });
 }
 

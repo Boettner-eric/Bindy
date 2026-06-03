@@ -34,7 +34,7 @@ const SCOPE_OPTIONS = [
 const MODE_OPTIONS = [
   { label: "Pinned (always visible, always active)", value: "pinned" },
   { label: "Background (hidden, always active)", value: "background" },
-  { label: "Focused (visible + active only on focus)", value: "focused" },
+  { label: "Focused (hidden, active only on focus)", value: "focused" },
 ];
 
 function makeHint(text) {
@@ -343,6 +343,19 @@ const EDIT_ACTIONS = [
   { label: "Delete", value: "delete" },
 ];
 
+function sortEditItems(items) {
+  const modeRank = { pinned: 0, focused: 1, background: 2 };
+  const hasMod = (h) => /^(ctrl|cmd|meta)\+/.test(h);
+  return [...items].sort((a, b) => {
+    const modeDiff =
+      (modeRank[a.binding.mode] ?? 1) - (modeRank[b.binding.mode] ?? 1);
+    if (modeDiff) return modeDiff;
+    const modDiff = hasMod(a.binding.hotkey) - hasMod(b.binding.hotkey);
+    if (modDiff) return modDiff;
+    return a.binding.hotkey.localeCompare(b.binding.hotkey);
+  });
+}
+
 function openEditModal(pageBindings, defaults, originalDefaults) {
   if (activeCancel) activeCancel();
 
@@ -366,10 +379,10 @@ function openEditModal(pageBindings, defaults, originalDefaults) {
 
     activeCancel = cancel;
 
-    const allItems = [
+    const allItems = sortEditItems([
       ...defaults.map((b) => ({ binding: b, isDefault: true })),
       ...pageBindings.map((b) => ({ binding: b, isDefault: false })),
-    ];
+    ]);
 
     if (allItems.length === 0) {
       const title = document.createElement("div");
@@ -490,7 +503,12 @@ function showEditActions(modal, title, binding, finish) {
       delete updated.scope;
       // Clear fields that don't apply to the new type
       if (picked.type !== "emulate") delete updated.emulateKey;
-      if (picked.type !== "click" && picked.type !== "autoClick" && picked.type !== "toggle") delete updated.selector;
+      if (
+        picked.type !== "click" &&
+        picked.type !== "autoClick" &&
+        picked.type !== "toggle"
+      )
+        delete updated.selector;
       if (picked.type !== "autoClick") delete updated.autoActive;
       if (picked.type !== "scroll") {
         delete updated.dy;
@@ -664,7 +682,12 @@ function showScopeStep(modal, pageUrl, onScope, onCancel) {
     }
   }
 
-  const scopeValues = { page: pageUrl, site: siteScope, all: "/", custom: null };
+  const scopeValues = {
+    page: pageUrl,
+    site: siteScope,
+    all: "/",
+    custom: null,
+  };
   const labels = SCOPE_OPTIONS.map((t) => {
     const val = scopeValues[t.value];
     return val !== null ? `${t.label} — ${val}` : t.label;

@@ -106,7 +106,7 @@ function setTheme(name) {
 
 function getLayout() {
   return new Promise((resolve) => {
-    chrome.storage.local.get({ layout: "bar" }, ({ layout }) => {
+    chrome.storage.local.get({ layout: "sidebar" }, ({ layout }) => {
       resolve(layout);
     });
   });

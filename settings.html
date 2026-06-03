@@ -20,6 +20,26 @@
       --highlight: #3b3750;
     }
 
+    /* Maps to variables Arc injects on tabs — see https://arc.net/colors.html */
+    html.bindy-theme-arc {
+      --bg: var(
+        --arc-background-simple-color,
+        var(
+          --arc-palette-backgroundExtra,
+          var(--arc-palette-background, #2b2836)
+        )
+      );
+      --bg-deep: var(
+        --arc-palette-background,
+        var(--arc-palette-backgroundExtra, #1e1c26)
+      );
+      --text: var(--arc-palette-foregroundPrimary, #dce7fd);
+      --muted: var(--arc-palette-subtitle, var(--arc-palette-foregroundTertiary, #655e7f));
+      --accent: var(--arc-palette-foregroundSecondary, #bd93f9);
+      --accent-glow: color-mix(in srgb, var(--arc-palette-foregroundSecondary, #bd93f9) 42%, transparent);
+      --highlight: var(--arc-palette-hover, #3b3750);
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
@@ -133,6 +153,10 @@
       justify-content: space-between;
       padding: 4px 0;
       gap: 8px;
+    }
+
+    .selector {
+      max-width: 120px;
     }
 
     .appearance-label {
@@ -407,7 +431,7 @@
         <div class="sidebar-heading">Appearance</div>
         <div class="appearance-row">
           <span class="appearance-label">Theme</span>
-          <select id="theme-select">
+          <select class="selector" id="theme-select">
             <option>Skeletor</option>
             <option>Dracula</option>
             <option>Nord</option>
@@ -419,7 +443,7 @@
         </div>
         <div class="appearance-row">
           <span class="appearance-label">Layout</span>
-          <select id="layout-select">
+          <select class="selector" id="layout-select">
             <option value="bar">Bottom bar</option>
             <option value="sidebar">Sidebar</option>
           </select>

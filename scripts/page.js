@@ -244,10 +244,10 @@ function initTopFrame() {
 
   async function handleClick(e) {
     if (!bindingMode || !awaitingClick) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
     const target = findInteractiveAncestor(e.composedPath()[0] ?? e.target);
     if (!target) return;
-    e.preventDefault();
-    e.stopPropagation();
 
     if (awaitingClick.onAltElement) {
       const { onAltElement } = awaitingClick;
