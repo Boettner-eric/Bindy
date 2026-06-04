@@ -1,4 +1,10 @@
-const STABLE_ATTRS = ["data-testid", "data-test", "name", "data-title-no-tooltip", "aria-label"];
+const STABLE_ATTRS = [
+  "data-testid",
+  "data-test",
+  "name",
+  "data-title-no-tooltip",
+  "aria-label",
+];
 
 const INTERACTIVE_TAGS = new Set([
   "A",
@@ -76,7 +82,8 @@ function getSelector(el) {
     return `${hostSelector} >>> ${innerSelector}`;
   }
 
-  if (el.id && document.querySelector(`#${CSS.escape(el.id)}`) === el) return `#${CSS.escape(el.id)}`;
+  if (el.id && document.querySelector(`#${CSS.escape(el.id)}`) === el)
+    return `#${CSS.escape(el.id)}`;
   const attrSel = uniqueAttrSelector(el);
   if (attrSel) return attrSel;
 
@@ -137,6 +144,11 @@ function activateElement(el) {
   if (isTypingTarget(el)) {
     el.focus();
   } else {
+    const opts = { bubbles: true, cancelable: true };
+    el.dispatchEvent(new MouseEvent("mousedown", opts));
+    el.dispatchEvent(new MouseEvent("mouseup", opts));
+    // click() after mousedown/mouseup mirrors real browser order; most sites
+    // handle click, but some (e.g. Gmail tabs) only listen on mouseup.
     el.click();
   }
 }
