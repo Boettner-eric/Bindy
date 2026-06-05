@@ -5,6 +5,7 @@ let preFocusEl = null;
 const BINDING_TYPES = [
   { type: "click", label: "Click element", needsElement: true },
   { type: "toggle", label: "Toggle element", needsElement: true },
+  { type: "sequence", label: "Click elements in order", needsElement: true },
   { type: "autoClick", label: "Auto click", needsElement: true },
   { type: "emulate", label: "Emulate key", needsElement: false },
   { type: "hint", label: "Hint (display only)", needsElement: false },
@@ -188,6 +189,53 @@ function openElementModal(targetEl, bindingType, pageUrl, { onNeedsAlt } = {}) {
       showNameStep(modal, onName, cancel);
       document.body.appendChild(modal);
     }
+  });
+}
+
+function openSequenceFinishModal(steps, pageUrl) {
+  if (activeCancel) activeCancel();
+
+  return new Promise((resolve) => {
+    const modal = createModal();
+    let settled = false;
+    const state = {};
+
+    function finish(value) {
+      if (settled) return;
+      settled = true;
+      teardownModal(modal);
+      resolve(value);
+    }
+
+    function cancel() { finish(null); }
+    activeCancel = cancel;
+
+    const title = document.createElement("div");
+    title.className = "bindy-modal__title";
+    title.textContent = "New sequence";
+    modal.appendChild(title);
+
+    function onMode(mode) {
+      finish({ type: "sequence", name: state.name, hotkey: state.hotkey, scope: state.scope, mode, steps });
+    }
+
+    function onScope(scope) {
+      state.scope = scope;
+      showModeStep(modal, onMode, cancel);
+    }
+
+    function onHotkey(hotkey) {
+      state.hotkey = hotkey;
+      showScopeStep(modal, pageUrl, onScope, cancel);
+    }
+
+    function onName(name) {
+      state.name = name;
+      showHotkeyStep(modal, `Hotkey for "${name}"`, onHotkey, cancel);
+    }
+
+    showNameStep(modal, onName, cancel);
+    document.body.appendChild(modal);
   });
 }
 

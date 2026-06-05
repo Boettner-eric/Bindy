@@ -10,6 +10,12 @@ function storageSet(data) {
   });
 }
 
+function storageClear(key) {
+  return new Promise((resolve) => {
+    chrome.storage.local.remove(key, resolve);
+  });
+}
+
 async function getBindings(pageUrl) {
   const { bindings } = await storageGet({ bindings: {} });
   return matchBindings(bindings, pageUrl);
@@ -60,6 +66,44 @@ async function updateBinding(oldScope, oldHotkey, newScope, newBinding) {
   newList.push(newBinding);
   bindings[newScope] = newList;
   await storageSet({ bindings });
+}
+
+async function getSequenceQueue(page) {
+  const key = `sequenceQueue-${page}`;
+  const storage = await storageGet({ [key]: null });
+  const queue = storage[key];
+
+  return queue ?? [];
+}
+
+async function setSequenceQueue(page, queue) {
+  await storageSet({ [`sequenceQueue-${page}`]: queue });
+}
+
+async function clearSequenceQueue(page) {
+  await storageClear(`sequenceQueue-${page}`);
+}
+
+function onSequenceQueueChange(cb) {
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== "local") return;
+    const key = `sequenceQueue-${window.location.host}${window.location.pathname}`;
+    if (!changes[key]) return;
+    cb(changes[key].newValue ?? []);
+  });
+}
+
+async function getSequenceDraft() {
+  const { sequenceDraft } = await storageGet({ sequenceDraft: null });
+  return sequenceDraft;
+}
+
+async function setSequenceDraft(steps) {
+  await storageSet({ sequenceDraft: { steps } });
+}
+
+async function clearSequenceDraft() {
+  await storageClear("sequenceDraft");
 }
 
 async function getBarHidden() {

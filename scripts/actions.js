@@ -1,47 +1,58 @@
+function clickBinding(binding) {
+  const primaryIframe = binding.iframe || null;
+  const altIframe =
+    binding.selectorAlt && binding.selectorAltIframe
+      ? binding.selectorAltIframe
+      : null;
+  const crossContext = !!binding.selectorAlt && primaryIframe !== altIframe;
+
+  if (!crossContext) {
+    // Same context: let one frame handle primary + alt with fallback logic.
+    if (primaryIframe) {
+      return dispatchToIframe(
+        primaryIframe,
+        binding.selector,
+        binding.selectorAlt || null,
+      );
+    }
+    const el = safeQuery(binding.selector);
+    const alt = binding.selectorAlt ? safeQuery(binding.selectorAlt) : null;
+    const target =
+      el && isVisible(el) ? el : alt && isVisible(alt) ? alt : el || alt;
+    if (!target) return false;
+    activateElement(target);
+    return true;
+  }
+
+  // Cross-context: primary and alt live in different frames.
+  // Dispatch to each independently; each fires only if its element is visible.
+  if (primaryIframe) {
+    dispatchToIframe(primaryIframe, binding.selector, null);
+  } else {
+    const el = safeQuery(binding.selector);
+    if (el) activateElement(el);
+  }
+  if (altIframe) {
+    dispatchToIframe(altIframe, binding.selectorAlt, null);
+  } else {
+    const alt = safeQuery(binding.selectorAlt);
+    if (alt && isVisible(alt)) activateElement(alt);
+  }
+  return true;
+}
+
 function executeBinding(binding, ctx) {
   const type = binding.type || "click";
   switch (type) {
-    case "toggle":
-    case "click": {
-      const primaryIframe = binding.iframe || null;
-      const altIframe =
-        binding.selectorAlt && binding.selectorAltIframe
-          ? binding.selectorAltIframe
-          : null;
-      const crossContext = !!binding.selectorAlt && primaryIframe !== altIframe;
-
-      if (!crossContext) {
-        // Same context: let one frame handle primary + alt with fallback logic.
-        if (primaryIframe) {
-          return dispatchToIframe(
-            primaryIframe,
-            binding.selector,
-            binding.selectorAlt || null,
-          );
-        }
-        const el = safeQuery(binding.selector);
-        const alt = binding.selectorAlt ? safeQuery(binding.selectorAlt) : null;
-        const target = (el && isVisible(el)) ? el : (alt && isVisible(alt)) ? alt : el || alt;
-        if (!target) return false;
-        activateElement(target);
+    case "sequence":
+      if (clickBinding(binding.steps[0]) && binding.steps.length > 1) {
+        setSequenceQueue(binding.steps[1].page, binding.steps.slice(1));
         return true;
       }
-
-      // Cross-context: primary and alt live in different frames.
-      // Dispatch to each independently; each fires only if its element is visible.
-      if (primaryIframe) {
-        dispatchToIframe(primaryIframe, binding.selector, null);
-      } else {
-        const el = safeQuery(binding.selector);
-        if (el) activateElement(el);
-      }
-      if (altIframe) {
-        dispatchToIframe(altIframe, binding.selectorAlt, null);
-      } else {
-        const alt = safeQuery(binding.selectorAlt);
-        if (alt && isVisible(alt)) activateElement(alt);
-      }
-      return true;
+      return false;
+    case "toggle":
+    case "click": {
+      return clickBinding(binding);
     }
     case "emulate": {
       const parts = parseHotkey(binding.emulateKey);
