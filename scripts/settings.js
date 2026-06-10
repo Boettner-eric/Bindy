@@ -7,7 +7,7 @@ const THEMES_DATA = [
   { name: "Rosé Pine", bg: "#191724", bgDeep: "#13111e", text: "#e0def4", muted: "#6e6a86", accent: "#ebbcba", accentGlow: "rgba(235,188,186,0.4)", highlight: "#26233a" },
 ];
 
-const BINDING_TYPES = ["click", "autoClick", "emulate", "hint", "scroll", "blur", "toggleBindingMode", "toggleBarHidden", "editBinding", "focusBar", "changeTheme", "changeLayout", "openSettings"];
+const BINDING_TYPES = ["click", "sequence", "autoClick", "emulate", "hint", "scroll", "blur", "toggleBindingMode", "toggleBarHidden", "editBinding", "focusBar", "changeTheme", "changeLayout", "openSettings"];
 
 const DEFAULT_NAMES = {
   toggleBindingMode: "bind",
@@ -400,7 +400,11 @@ function openEditPanel(binding, scope) {
         if (t === (binding.type || "click")) opt.selected = true;
         sel.appendChild(opt);
       }
-      sel.addEventListener("change", () => save({ type: sel.value }));
+      if (binding.type === "sequence") {
+        sel.disabled = true;
+      } else {
+        sel.addEventListener("change", () => save({ type: sel.value }));
+      }
       return sel;
     }));
   }
