@@ -78,7 +78,9 @@ function initTopFrame() {
   }
 
   function handleNavigation() {
-    getBindings(getPagePath()).then(applyBindings);
+    const page = getPagePath();
+    getBindings(page).then(applyBindings);
+    getSequenceQueue(page).then(fireSequenceQueue);
   }
 
   if (window.navigation) {
@@ -92,7 +94,9 @@ function initTopFrame() {
   const focusTrap = createFocusTrap();
 
   function syncAutoObserver() {
-    const active = pageBindings.filter((b) => b.type === "autoClick" && b.autoActive);
+    const active = pageBindings.filter(
+      (b) => b.type === "autoClick" && b.autoActive,
+    );
 
     if (autoObserver) {
       autoObserver.disconnect();
@@ -168,17 +172,80 @@ function initTopFrame() {
     syncAutoObserver();
   }
 
+  let sequenceObserver = null;
+  let sequenceTimeout = null;
+
+  function cancelSequenceWatcher() {
+    if (sequenceObserver) {
+      sequenceObserver.disconnect();
+      sequenceObserver = null;
+    }
+    clearTimeout(sequenceTimeout);
+    sequenceTimeout = null;
+  }
+
+  async function fireSequenceQueue(queue) {
+    cancelSequenceWatcher();
+    if (!queue || queue.length === 0) return;
+
+    const [step, ...remaining] = queue;
+    const page = getPagePath();
+
+    async function advance(el) {
+      if (remaining.length === 0) {
+        await clearSequenceQueue(page);
+      } else {
+        await setSequenceQueue(remaining[0].page, remaining);
+      }
+      activateElement(el);
+    }
+
+    const el = safeQuery(step.selector);
+    if (el && isVisible(el)) {
+      await advance(el);
+      return;
+    }
+
+    sequenceObserver = new MutationObserver(async () => {
+      const found = safeQuery(step.selector);
+      if (!found || !isVisible(found)) return;
+      cancelSequenceWatcher();
+      await advance(found);
+    });
+    sequenceObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+    });
+
+    sequenceTimeout = setTimeout(() => {
+      cancelSequenceWatcher();
+      clearSequenceQueue(page);
+    }, 10000);
+  }
+
   async function loadInitialState() {
-    const [allBindings, hidden, theme, layout] = await Promise.all([
-      getBindings(getPagePath()),
+    const page = getPagePath();
+    const [allBindings, hidden, theme, layout, queue, draft] = await Promise.all([
+      getBindings(page),
       getBarHidden(),
       getTheme(),
       getLayout(),
+      getSequenceQueue(page),
+      getSequenceDraft(),
     ]);
     applyBindings(allBindings);
     setBarHidden(bar, hidden);
     applyTheme(theme);
     applyLayout(bar, layout);
+    if (draft) {
+      bindingMode = true;
+      notifyIframesBindingMode(true);
+      setBarActive(bar, true);
+      startSequenceBindFlow(draft.steps);
+    } else {
+      fireSequenceQueue(queue);
+    }
   }
 
   loadInitialState();
@@ -187,6 +254,7 @@ function initTopFrame() {
   onBindingsChange(applyBindings);
   onThemeChange((theme) => applyTheme(theme));
   onLayoutChange((layout) => applyLayout(bar, layout));
+  onSequenceQueueChange(fireSequenceQueue);
 
   function clearSelection() {
     if (selectedElement) {
@@ -200,6 +268,7 @@ function initTopFrame() {
     notifyIframesBindingMode(bindingMode);
     setBarActive(bar, bindingMode);
     if (!bindingMode) {
+      if (awaitingClick?.onSequenceStep) clearSequenceDraft();
       awaitingClick = null;
       clearSelection();
       closeHotkeyModal();
@@ -217,7 +286,9 @@ function initTopFrame() {
       return;
     }
 
-    if (result.needsElement) {
+    if (result.bindingType === "sequence") {
+      startSequenceBindFlow();
+    } else if (result.needsElement) {
       awaitingClick = { bindingType: result.bindingType };
       showDirections(directions, "Click an element · Esc to cancel");
     } else {
@@ -226,17 +297,66 @@ function initTopFrame() {
     }
   }
 
+  function startSequenceBindFlow(initialSteps = []) {
+    const steps = [...initialSteps];
+
+    function promptNext() {
+      const n = steps.length + 1;
+      const canFinish = steps.length >= 2;
+      showDirections(
+        directions,
+        canFinish
+          ? `Click step ${n} · Enter to finish · Esc to cancel`
+          : `Click step ${n} · Esc to cancel`,
+      );
+      awaitingClick = {
+        onSequenceStep: onStep,
+        onSequenceFinish: canFinish ? finishCapture : null,
+      };
+    }
+
+    async function onStep(targetEl) {
+      const isDescriptor = !(targetEl instanceof Element);
+      const step = {
+        selector: isDescriptor ? targetEl.selector : getSelector(targetEl),
+        page: getPagePath(),
+      };
+      if (isDescriptor && targetEl.iframeSelector) step.iframe = targetEl.iframeSelector;
+      steps.push(step);
+      awaitingClick = null;
+      await setSequenceDraft(steps);
+      promptNext();
+    }
+
+    async function finishCapture() {
+      awaitingClick = null;
+      hideDirections(directions);
+      await clearSequenceDraft();
+      const result = await openSequenceFinishModal(steps, getPagePath());
+      clearSelection();
+      if (result) await addBinding(result.scope, result);
+      if (bindingMode) toggleBindingMode();
+    }
+
+    promptNext();
+  }
+
   async function completeElementPick(targetEl) {
     const { bindingType } = awaitingClick;
     awaitingClick = null;
 
-    const result = await openElementModal(targetEl, bindingType, getPagePath(), {
-      onNeedsAlt(onAltElement) {
-        awaitingClick = { onAltElement };
-        notifyIframesBindingMode(true);
-        showDirections(directions, "Click the alternate element");
+    const result = await openElementModal(
+      targetEl,
+      bindingType,
+      getPagePath(),
+      {
+        onNeedsAlt(onAltElement) {
+          awaitingClick = { onAltElement };
+          notifyIframesBindingMode(true);
+          showDirections(directions, "Click the alternate element");
+        },
       },
-    });
+    );
     clearSelection();
     if (result) await addBinding(result.scope, result);
     if (bindingMode) toggleBindingMode();
@@ -244,25 +364,31 @@ function initTopFrame() {
 
   async function handleClick(e) {
     if (!bindingMode || !awaitingClick) return;
-    e.preventDefault();
-    e.stopImmediatePropagation();
+
     const target = findInteractiveAncestor(e.composedPath()[0] ?? e.target);
     if (!target) return;
+
+    clearSelection();
+    selectedElement = target;
+    target.classList.add("bindy-selected");
+
+    if (awaitingClick.onSequenceStep) {
+      // Don't preventDefault — let the click proceed naturally so <a> tags navigate
+      await awaitingClick.onSequenceStep(target);
+      return;
+    }
+
+    e.preventDefault();
+    e.stopImmediatePropagation();
 
     if (awaitingClick.onAltElement) {
       const { onAltElement } = awaitingClick;
       awaitingClick = null;
-      clearSelection();
-      selectedElement = target;
-      target.classList.add("bindy-selected");
       showDirections(directions, "Alternate element captured");
       onAltElement(target);
       return;
     }
 
-    clearSelection();
-    selectedElement = target;
-    target.classList.add("bindy-selected");
     await completeElementPick(target);
   }
 
@@ -274,6 +400,11 @@ function initTopFrame() {
       awaitingClick = null;
       showDirections(directions, "Alternate element captured");
       onAltElement({ selector, iframeSelector });
+      return;
+    }
+
+    if (awaitingClick.onSequenceStep) {
+      await awaitingClick.onSequenceStep({ selector, iframeSelector });
       return;
     }
 
@@ -304,13 +435,19 @@ function initTopFrame() {
 
   function doToggleBarHidden() {
     const wasBarFocused = document.activeElement === bar;
-    const temporarilyShown = wasBarFocused && bar.classList.contains("bindy-bar--hidden");
+    const temporarilyShown =
+      wasBarFocused && bar.classList.contains("bindy-bar--hidden");
     bar.blur();
     if (wasBarFocused) restorePreviousFocus();
     if (!temporarilyShown) toggleBarHidden();
   }
 
-  const ctx = { toggleBindingMode, editBindings, focusBar, toggleBarHidden: doToggleBarHidden };
+  const ctx = {
+    toggleBindingMode,
+    editBindings,
+    focusBar,
+    toggleBarHidden: doToggleBarHidden,
+  };
 
   function handleKeys(e) {
     if (activeModal) return;
@@ -322,7 +459,15 @@ function initTopFrame() {
       return;
     }
 
-    if (isTypingTarget(e.target) && !e.ctrlKey && !e.metaKey && !e.altKey) return;
+    if (bindingMode && awaitingClick?.onSequenceFinish && e.key === "Enter") {
+      e.preventDefault();
+      e.stopPropagation();
+      awaitingClick.onSequenceFinish();
+      return;
+    }
+
+    if (isTypingTarget(e.target) && !e.ctrlKey && !e.metaKey && !e.altKey)
+      return;
 
     const barFocused = document.activeElement === bar;
 
